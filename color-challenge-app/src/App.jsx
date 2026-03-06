@@ -304,6 +304,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   const [results, setResults] = useState(existingSubmission?.results || null);
   const [analyzing, setAnalyzing] = useState(false);
   const [previews, setPreviews] = useState([]);
+  const [hasReset, setHasReset] = useState(false);
   const fileRef = useRef(null);
 
   const addFiles = useCallback((files) => {
@@ -334,13 +335,14 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
     setResults(null);
     setPhotos([]);
     setPreviews((old) => { old.forEach(URL.revokeObjectURL); return []; });
+    setHasReset(true);
   };
 
   if (results) {
     return <ResultsScreen results={results} todayColor={todayColor} onReset={handleReset} />;
   }
 
-  if (existingSubmission?.completed) {
+  if (existingSubmission?.completed && !hasReset) {
     return <ResultsScreen results={existingSubmission.results} todayColor={todayColor} onReset={handleReset} />;
   }
 
