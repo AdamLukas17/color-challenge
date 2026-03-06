@@ -339,11 +339,11 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   };
 
   if (results) {
-    return <ResultsScreen results={results} todayColor={todayColor} onReset={handleReset} />;
+    return <ResultsScreen results={results} previews={previews} todayColor={todayColor} onReset={handleReset} />;
   }
 
   if (existingSubmission?.completed && !hasReset) {
-    return <ResultsScreen results={existingSubmission.results} todayColor={todayColor} onReset={handleReset} />;
+    return <ResultsScreen results={existingSubmission.results} previews={[]} todayColor={todayColor} onReset={handleReset} />;
   }
 
   return (
@@ -417,7 +417,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   );
 }
 
-function ResultsScreen({ results, todayColor, onReset }) {
+function ResultsScreen({ results, previews = [], todayColor, onReset }) {
   const passCount = results.filter((r) => r.passed).length;
   const allPassed = passCount === MAX_PHOTOS;
 
@@ -458,6 +458,9 @@ function ResultsScreen({ results, todayColor, onReset }) {
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <span style={{ fontSize: "22px" }}>{r.passed ? "🟢" : "🔴"}</span>
+                {previews[i] && (
+                  <img src={previews[i]} alt={`Photo ${i + 1}`} style={{ width: "40px", height: "40px", objectFit: "cover", borderRadius: "6px", border: `2px solid ${r.passed ? "#C8E6C9" : "#FFCDD2"}` }} />
+                )}
                 <span style={{ fontWeight: 600, fontSize: "15px", color: theme.text }}>Photo {i + 1}</span>
               </div>
               <div style={{ fontFamily: theme.mono, fontSize: "14px", color: r.passed ? theme.green : theme.red, fontWeight: 700 }}>
