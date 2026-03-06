@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 /* ─── Constants ─── */
 const TOLERANCE = 178; // 70% of 255
-const THRESHOLD = 15;
+const THRESHOLD = 1;
 const MAX_PHOTOS = 3;
 
 /* ─── Curated Color Palette (~100 interesting, photographable colors) ─── */
@@ -366,7 +366,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
           Upload Photos ({photos.length}/{MAX_PHOTOS})
         </div>
         <div style={{ fontSize: "14px", color: theme.textSecondary, marginBottom: "20px", lineHeight: 1.5 }}>
-          Take {MAX_PHOTOS} photos where <strong>15%+</strong> of the frame is {todayColor.name} (±{TOLERANCE} RGB tolerance).
+          Take {MAX_PHOTOS} photos that contain {todayColor.name} anywhere in the frame (±{TOLERANCE} RGB tolerance).
         </div>
 
         {previews.length > 0 && (
