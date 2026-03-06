@@ -187,6 +187,7 @@ function analyzeImage(file, targetHex) {
 }
 
 /* ─── localStorage helpers ─── */
+const ONBOARDING_KEY = "color-challenge-onboarded";
 const STORAGE_KEY = "color-challenge-data";
 
 function loadData() {
@@ -298,49 +299,11 @@ function Button({ children, onClick, variant = "primary", disabled = false, styl
 
 /* ─── Screens ─── */
 
-/* Generate a synthetic test image as a Blob */
-function generateTestImage(targetHex, matchPercent) {
-  return new Promise((resolve) => {
-    const size = 200;
-    const canvas = document.createElement("canvas");
-    canvas.width = size;
-    canvas.height = size;
-    const ctx = canvas.getContext("2d");
-    const target = hexToRgb(targetHex);
-
-    // Fill matching portion with target color (with slight natural variation)
-    const matchRows = Math.floor(size * (matchPercent / 100));
-    for (let y = 0; y < matchRows; y++) {
-      for (let x = 0; x < size; x++) {
-        const vary = Math.floor(Math.random() * 16) - 8;
-        ctx.fillStyle = `rgb(${Math.min(255, Math.max(0, target.r + vary))},${Math.min(255, Math.max(0, target.g + vary))},${Math.min(255, Math.max(0, target.b + vary))})`;
-        ctx.fillRect(x, y, 1, 1);
-      }
-    }
-    // Fill remainder with a contrasting color
-    if (matchRows < size) {
-      const contrastColors = ["#2B2D42", "#8D99AE", "#EDF2F4", "#D90429", "#FFBE0B"];
-      ctx.fillStyle = contrastColors[Math.floor(Math.random() * contrastColors.length)];
-      ctx.fillRect(0, matchRows, size, size - matchRows);
-      // Add some texture
-      for (let y = matchRows; y < size; y++) {
-        for (let x = 0; x < size; x += 3) {
-          ctx.fillStyle = `rgba(${Math.random()*255|0},${Math.random()*255|0},${Math.random()*255|0},0.15)`;
-          ctx.fillRect(x, y, 2, 2);
-        }
-      }
-    }
-
-    canvas.toBlob((blob) => resolve(blob), "image/png");
-  });
-}
-
 function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   const [photos, setPhotos] = useState([]);
   const [results, setResults] = useState(existingSubmission?.results || null);
   const [analyzing, setAnalyzing] = useState(false);
   const [previews, setPreviews] = useState([]);
-  const [generating, setGenerating] = useState(false);
   const fileRef = useRef(null);
 
   const addFiles = useCallback((files) => {
@@ -357,17 +320,6 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   const removePhoto = (idx) => {
     const np = [...photos]; np.splice(idx, 1); setPhotos(np);
     const nv = [...previews]; URL.revokeObjectURL(nv[idx]); nv.splice(idx, 1); setPreviews(nv);
-  };
-
-  const handleGenerateDemo = async () => {
-    setGenerating(true);
-    // Generate 5 test images with varying match percentages (some pass, some fail)
-    const matchPercents = [85, 72, 45, 91, 55];
-    const blobs = await Promise.all(matchPercents.map((pct) => generateTestImage(todayColor.hex, pct)));
-    const files = blobs.map((b, i) => new File([b], `test-photo-${i + 1}.png`, { type: "image/png" }));
-    setPhotos(files);
-    setPreviews((old) => { old.forEach(URL.revokeObjectURL); return files.map(f => URL.createObjectURL(f)); });
-    setGenerating(false);
   };
 
   const handleSubmit = async () => {
@@ -439,21 +391,6 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
         <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleFileInput} style={{ display: "none" }} />
 
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-          {photos.length === 0 && (
-            <Button variant="secondary" onClick={handleGenerateDemo} disabled={generating}>
-              {generating ? (
-                <>
-                  <span style={{ display: "inline-block", width: 16, height: 16, border: "2px solid rgba(0,0,0,0.2)", borderTopColor: theme.text, borderRadius: "50%", animation: "spin 0.8s linear infinite" }} />
-                  Generating...
-                </>
-              ) : (
-                <>
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>
-                  Try Demo Photos
-                </>
-              )}
-            </Button>
-          )}
           {photos.length === MAX_PHOTOS && (
             <Button onClick={handleSubmit} disabled={analyzing}>
               {analyzing ? (
@@ -612,12 +549,69 @@ function CalendarScreen({ submissions }) {
   );
 }
 
+/* ─── Info Modal ─── */
+function InfoModal({ onClose }) {
+  return (
+    <div style={{
+      position: "fixed", top: 0, left: 0, right: 0, bottom: 0, zIndex: 1000,
+      background: "rgba(0,0,0,0.5)", display: "flex", alignItems: "center", justifyContent: "center",
+      padding: "20px", backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+    }} onClick={onClose}>
+      <div style={{
+        background: theme.surface, borderRadius: theme.radius, padding: "32px 28px",
+        maxWidth: "400px", width: "100%", boxShadow: theme.shadowLg,
+        position: "relative",
+      }} onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} style={{
+          position: "absolute", top: "16px", right: "16px", width: "28px", height: "28px",
+          borderRadius: "50%", background: theme.surfaceAlt, color: theme.textSecondary,
+          border: `1px solid ${theme.border}`, cursor: "pointer", fontSize: "16px",
+          display: "flex", alignItems: "center", justifyContent: "center", lineHeight: 1,
+        }}>×</button>
+
+        <div style={{ textAlign: "center", marginBottom: "24px" }}>
+          <div style={{ fontSize: "40px", marginBottom: "12px" }}>🎨</div>
+          <div style={{ fontSize: "22px", fontWeight: 700, color: theme.text, marginBottom: "4px" }}>Welcome to Chromatic</div>
+          <div style={{ fontSize: "14px", color: theme.textSecondary }}>Your daily color challenge</div>
+        </div>
+
+        <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "28px" }}>
+          {[
+            { icon: "🎯", title: "Daily Color", desc: "Each day you get a new color to find in the real world." },
+            { icon: "📸", title: "Snap 5 Photos", desc: "Upload 5 photos where 60%+ of the frame matches the day's color." },
+            { icon: "✅", title: "Get Scored", desc: "Each photo is analyzed for color accuracy. Try to pass all 5!" },
+            { icon: "🔥", title: "Build a Streak", desc: "Complete challenges daily to build your streak and share results." },
+          ].map((item, i) => (
+            <div key={i} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
+              <div style={{ fontSize: "22px", lineHeight: 1, flexShrink: 0, marginTop: "2px" }}>{item.icon}</div>
+              <div>
+                <div style={{ fontSize: "15px", fontWeight: 600, color: theme.text, marginBottom: "2px" }}>{item.title}</div>
+                <div style={{ fontSize: "13px", color: theme.textSecondary, lineHeight: 1.4 }}>{item.desc}</div>
+              </div>
+            </div>
+          ))}
+        </div>
+
+        <Button onClick={onClose} style={{ width: "100%", justifyContent: "center" }}>
+          Got it, let's go!
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 /* ─── App ─── */
 export default function App() {
   const [tab, setTab] = useState("challenge");
   const [data, setData] = useState(loadData);
+  const [showInfo, setShowInfo] = useState(() => !localStorage.getItem(ONBOARDING_KEY));
   const todayStr = getLocalDateStr();
   const todayColor = useMemo(() => getColorForDate(todayStr), [todayStr]);
+
+  const handleCloseInfo = () => {
+    setShowInfo(false);
+    localStorage.setItem(ONBOARDING_KEY, "true");
+  };
 
   const handleComplete = (results) => {
     const passCount = results.filter((r) => r.passed).length;
@@ -644,6 +638,24 @@ export default function App() {
   return (
     <div style={{ fontFamily: theme.font, background: theme.bg, minHeight: "100vh", color: theme.text }}>
       <style>{fonts}</style>
+
+      {/* Onboarding / Info Modal */}
+      {showInfo && <InfoModal onClose={handleCloseInfo} />}
+
+      {/* Floating Info Button */}
+      <button onClick={() => setShowInfo(true)} style={{
+        position: "fixed", bottom: "80px", right: "20px", zIndex: 99,
+        width: "40px", height: "40px", borderRadius: "50%",
+        background: theme.surface, border: `1px solid ${theme.border}`,
+        boxShadow: theme.shadow, cursor: "pointer",
+        display: "flex", alignItems: "center", justifyContent: "center",
+        color: theme.textSecondary, fontSize: "18px", fontWeight: 700,
+        fontFamily: theme.font, transition: "all 0.2s ease",
+      }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+          <circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/>
+        </svg>
+      </button>
 
       {/* Header */}
       <div style={{
