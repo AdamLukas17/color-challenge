@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 /* ─── Constants ─── */
-const TOLERANCE = 45;
+const TOLERANCE = 178; // 70% of 255
 const THRESHOLD = 15;
 const MAX_PHOTOS = 3;
 
