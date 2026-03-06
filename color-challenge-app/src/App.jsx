@@ -304,6 +304,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   const [results, setResults] = useState(existingSubmission?.results || null);
   const [analyzing, setAnalyzing] = useState(false);
   const [previews, setPreviews] = useState([]);
+  const [submitPreviews, setSubmitPreviews] = useState([]);
   const [hasReset, setHasReset] = useState(false);
   const fileRef = useRef(null);
 
@@ -325,7 +326,16 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
 
   const handleSubmit = async () => {
     setAnalyzing(true);
-    const res = await Promise.all(photos.map((f) => analyzeImage(f, todayColor.hex)));
+    const readDataUrl = (f) => new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.readAsDataURL(f);
+    });
+    const [res, dataUrls] = await Promise.all([
+      Promise.all(photos.map((f) => analyzeImage(f, todayColor.hex))),
+      Promise.all(photos.map(readDataUrl)),
+    ]);
+    setSubmitPreviews(dataUrls);
     setResults(res);
     setAnalyzing(false);
     onComplete(res);
@@ -333,13 +343,14 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
 
   const handleReset = () => {
     setResults(null);
+    setSubmitPreviews([]);
     setPhotos([]);
     setPreviews((old) => { old.forEach(URL.revokeObjectURL); return []; });
     setHasReset(true);
   };
 
   if (results) {
-    return <ResultsScreen results={results} previews={previews} todayColor={todayColor} onReset={handleReset} />;
+    return <ResultsScreen results={results} previews={submitPreviews} todayColor={todayColor} onReset={handleReset} />;
   }
 
   if (existingSubmission?.completed && !hasReset) {
