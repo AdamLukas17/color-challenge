@@ -377,7 +377,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
           Upload Photos ({photos.length}/{MAX_PHOTOS})
         </div>
         <div style={{ fontSize: "14px", color: theme.textSecondary, marginBottom: "20px", lineHeight: 1.5 }}>
-          Take {MAX_PHOTOS} photos that contain {todayColor.name} anywhere in the frame (±{TOLERANCE} RGB tolerance).
+          Find <strong>{todayColor.name}</strong> in the real world and upload {MAX_PHOTOS} photos. Each photo just needs a touch of the color somewhere in the frame — we use a wide color tolerance so natural lighting and shades all count!
         </div>
 
         {previews.length > 0 && (
@@ -608,7 +608,7 @@ function InfoModal({ onClose }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "28px" }}>
           {[
             { icon: "🎯", title: "Daily Color", desc: "Each day you get a new color to find in the real world." },
-            { icon: "📸", title: "Snap 3 Photos", desc: "Upload 3 photos where 15%+ of the frame matches the day's color." },
+            { icon: "📸", title: "Snap 3 Photos", desc: "Upload 3 photos that contain the day's color anywhere in the frame." },
             { icon: "✅", title: "Get Scored", desc: "Each photo is analyzed for color accuracy. Try to pass all 3!" },
             { icon: "🔥", title: "Build a Streak", desc: "Complete challenges daily to build your streak and share results." },
           ].map((item, i) => (
