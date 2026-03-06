@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 /* ─── Constants ─── */
-const TOLERANCE = 45;
-const THRESHOLD = 15;
+const TOLERANCE = 178; // 70% of 255
+const THRESHOLD = 1;
 const MAX_PHOTOS = 3;
 
 /* ─── Curated Color Palette (~100 interesting, photographable colors) ─── */
@@ -304,6 +304,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   const [results, setResults] = useState(existingSubmission?.results || null);
   const [analyzing, setAnalyzing] = useState(false);
   const [previews, setPreviews] = useState([]);
+  const submitPreviewsRef = useRef([]);
   const [hasReset, setHasReset] = useState(false);
   const fileRef = useRef(null);
 
@@ -325,7 +326,16 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
 
   const handleSubmit = async () => {
     setAnalyzing(true);
-    const res = await Promise.all(photos.map((f) => analyzeImage(f, todayColor.hex)));
+    const readDataUrl = (f) => new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => resolve(e.target.result);
+      reader.readAsDataURL(f);
+    });
+    const [res, dataUrls] = await Promise.all([
+      Promise.all(photos.map((f) => analyzeImage(f, todayColor.hex))),
+      Promise.all(photos.map(readDataUrl)),
+    ]);
+    submitPreviewsRef.current = dataUrls;
     setResults(res);
     setAnalyzing(false);
     onComplete(res);
@@ -333,17 +343,18 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
 
   const handleReset = () => {
     setResults(null);
+    submitPreviewsRef.current = [];
     setPhotos([]);
     setPreviews((old) => { old.forEach(URL.revokeObjectURL); return []; });
     setHasReset(true);
   };
 
   if (results) {
-    return <ResultsScreen results={results} todayColor={todayColor} onReset={handleReset} />;
+    return <ResultsScreen results={results} previews={submitPreviewsRef.current} todayColor={todayColor} onReset={handleReset} />;
   }
 
   if (existingSubmission?.completed && !hasReset) {
-    return <ResultsScreen results={existingSubmission.results} todayColor={todayColor} onReset={handleReset} />;
+    return <ResultsScreen results={existingSubmission.results} previews={[]} todayColor={todayColor} onReset={handleReset} />;
   }
 
   return (
@@ -366,7 +377,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
           Upload Photos ({photos.length}/{MAX_PHOTOS})
         </div>
         <div style={{ fontSize: "14px", color: theme.textSecondary, marginBottom: "20px", lineHeight: 1.5 }}>
-          Take {MAX_PHOTOS} photos where <strong>15%+</strong> of the frame is {todayColor.name} (±{TOLERANCE} RGB tolerance).
+          Find <strong>{todayColor.name}</strong> in the real world and upload {MAX_PHOTOS} photos. Each photo just needs a touch of the color somewhere in the frame — we use a wide color tolerance so natural lighting and shades all count!
         </div>
 
         {previews.length > 0 && (
@@ -417,7 +428,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   );
 }
 
-function ResultsScreen({ results, todayColor, onReset }) {
+function ResultsScreen({ results, previews = [], todayColor, onReset }) {
   const passCount = results.filter((r) => r.passed).length;
   const allPassed = passCount === MAX_PHOTOS;
 
@@ -458,6 +469,9 @@ function ResultsScreen({ results, todayColor, onReset }) {
             }}>
               <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
                 <span style={{ fontSize: "22px" }}>{r.passed ? "🟢" : "🔴"}</span>
+                {previews[i] && (
+                  <img src={previews[i]} alt={`Photo ${i + 1}`} style={{ width: "40px", height: "40px", objectFit: "cover", borderRadius: "6px", border: `2px solid ${r.passed ? "#C8E6C9" : "#FFCDD2"}` }} />
+                )}
                 <span style={{ fontWeight: 600, fontSize: "15px", color: theme.text }}>Photo {i + 1}</span>
               </div>
               <div style={{ fontFamily: theme.mono, fontSize: "14px", color: r.passed ? theme.green : theme.red, fontWeight: 700 }}>
@@ -594,7 +608,7 @@ function InfoModal({ onClose }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "28px" }}>
           {[
             { icon: "🎯", title: "Daily Color", desc: "Each day you get a new color to find in the real world." },
-            { icon: "📸", title: "Snap 3 Photos", desc: "Upload 3 photos where 15%+ of the frame matches the day's color." },
+            { icon: "📸", title: "Snap 3 Photos", desc: "Upload 3 photos that contain the day's color anywhere in the frame." },
             { icon: "✅", title: "Get Scored", desc: "Each photo is analyzed for color accuracy. Try to pass all 3!" },
             { icon: "🔥", title: "Build a Streak", desc: "Complete challenges daily to build your streak and share results." },
           ].map((item, i) => (
