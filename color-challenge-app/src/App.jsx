@@ -1,9 +1,9 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 /* ─── Constants ─── */
-const TOLERANCE = 25;
+const TOLERANCE = 45;
 const THRESHOLD = 15;
-const MAX_PHOTOS = 5;
+const MAX_PHOTOS = 3;
 
 /* ─── Curated Color Palette (~100 interesting, photographable colors) ─── */
 const PALETTE = [
@@ -594,8 +594,8 @@ function InfoModal({ onClose }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "28px" }}>
           {[
             { icon: "🎯", title: "Daily Color", desc: "Each day you get a new color to find in the real world." },
-            { icon: "📸", title: "Snap 5 Photos", desc: "Upload 5 photos where 15%+ of the frame matches the day's color." },
-            { icon: "✅", title: "Get Scored", desc: "Each photo is analyzed for color accuracy. Try to pass all 5!" },
+            { icon: "📸", title: "Snap 3 Photos", desc: "Upload 3 photos where 15%+ of the frame matches the day's color." },
+            { icon: "✅", title: "Get Scored", desc: "Each photo is analyzed for color accuracy. Try to pass all 3!" },
             { icon: "🔥", title: "Build a Streak", desc: "Complete challenges daily to build your streak and share results." },
           ].map((item, i) => (
             <div key={i} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
