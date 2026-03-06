@@ -2,7 +2,7 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 /* ─── Constants ─── */
 const TOLERANCE = 25;
-const THRESHOLD = 25;
+const THRESHOLD = 15;
 const MAX_PHOTOS = 5;
 
 /* ─── Curated Color Palette (~100 interesting, photographable colors) ─── */
@@ -366,7 +366,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
           Upload Photos ({photos.length}/{MAX_PHOTOS})
         </div>
         <div style={{ fontSize: "14px", color: theme.textSecondary, marginBottom: "20px", lineHeight: 1.5 }}>
-          Take {MAX_PHOTOS} photos where <strong>25%+</strong> of the frame is {todayColor.name} (±{TOLERANCE} RGB tolerance).
+          Take {MAX_PHOTOS} photos where <strong>15%+</strong> of the frame is {todayColor.name} (±{TOLERANCE} RGB tolerance).
         </div>
 
         {previews.length > 0 && (
@@ -594,7 +594,7 @@ function InfoModal({ onClose }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "28px" }}>
           {[
             { icon: "🎯", title: "Daily Color", desc: "Each day you get a new color to find in the real world." },
-            { icon: "📸", title: "Snap 5 Photos", desc: "Upload 5 photos where 25%+ of the frame matches the day's color." },
+            { icon: "📸", title: "Snap 5 Photos", desc: "Upload 5 photos where 15%+ of the frame matches the day's color." },
             { icon: "✅", title: "Get Scored", desc: "Each photo is analyzed for color accuracy. Try to pass all 5!" },
             { icon: "🔥", title: "Build a Streak", desc: "Complete challenges daily to build your streak and share results." },
           ].map((item, i) => (
