@@ -304,7 +304,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   const [results, setResults] = useState(existingSubmission?.results || null);
   const [analyzing, setAnalyzing] = useState(false);
   const [previews, setPreviews] = useState([]);
-  const [submitPreviews, setSubmitPreviews] = useState([]);
+  const submitPreviewsRef = useRef([]);
   const [hasReset, setHasReset] = useState(false);
   const fileRef = useRef(null);
 
@@ -335,7 +335,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
       Promise.all(photos.map((f) => analyzeImage(f, todayColor.hex))),
       Promise.all(photos.map(readDataUrl)),
     ]);
-    setSubmitPreviews(dataUrls);
+    submitPreviewsRef.current = dataUrls;
     setResults(res);
     setAnalyzing(false);
     onComplete(res);
@@ -343,14 +343,14 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
 
   const handleReset = () => {
     setResults(null);
-    setSubmitPreviews([]);
+    submitPreviewsRef.current = [];
     setPhotos([]);
     setPreviews((old) => { old.forEach(URL.revokeObjectURL); return []; });
     setHasReset(true);
   };
 
   if (results) {
-    return <ResultsScreen results={results} previews={submitPreviews} todayColor={todayColor} onReset={handleReset} />;
+    return <ResultsScreen results={results} previews={submitPreviewsRef.current} todayColor={todayColor} onReset={handleReset} />;
   }
 
   if (existingSubmission?.completed && !hasReset) {
