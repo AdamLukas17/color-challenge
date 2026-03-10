@@ -622,7 +622,7 @@ function InfoModal({ onClose }) {
 
         <div style={{ textAlign: "center", marginBottom: "24px" }}>
           <div style={{ fontSize: "40px", marginBottom: "12px" }}>🎨</div>
-          <div style={{ fontSize: "22px", fontWeight: 700, color: theme.text, marginBottom: "4px" }}>Welcome to Chromatic</div>
+          <div style={{ fontSize: "22px", fontWeight: 700, color: theme.text, marginBottom: "4px" }}>Welcome to Color Snap</div>
           <div style={{ fontSize: "14px", color: theme.textSecondary }}>Your daily color challenge</div>
         </div>
 
