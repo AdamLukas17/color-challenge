@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 /* ─── Constants ─── */
-const TOLERANCE = 178; // 70% of 255
+const HUE_TOLERANCE = 30;    // degrees — allows same color family, rejects adjacent families
+const MIN_SATURATION = 0.15; // skip near-gray pixels (hue is undefined/unstable for achromatic colors)
 const THRESHOLD = 1;
 const MAX_PHOTOS = 3;
 
@@ -137,6 +138,23 @@ function hexToRgb(hex) {
   return { r, g, b };
 }
 
+function rgbToHsl(r, g, b) {
+  r /= 255; g /= 255; b /= 255;
+  const max = Math.max(r, g, b);
+  const min = Math.min(r, g, b);
+  const l = (max + min) / 2;
+  const d = max - min;
+  if (d === 0) return { h: 0, s: 0, l };
+  const s = d / (1 - Math.abs(2 * l - 1));
+  let h;
+  switch (max) {
+    case r: h = ((g - b) / d + 6) % 6; break;
+    case g: h = (b - r) / d + 2;       break;
+    default: h = (r - g) / d + 4;      break;
+  }
+  return { h: h * 60, s, l };
+}
+
 function getLocalDateStr() {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
@@ -168,17 +186,20 @@ function analyzeImage(file, targetHex) {
       ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
       const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
       const target = hexToRgb(targetHex);
+      const targetHsl = rgbToHsl(target.r, target.g, target.b);
       let matchCount = 0;
+      let comparablePixels = 0;
       const totalPixels = data.length / 4;
       for (let i = 0; i < data.length; i += 4) {
-        const dr = Math.abs(data[i] - target.r);
-        const dg = Math.abs(data[i + 1] - target.g);
-        const db = Math.abs(data[i + 2] - target.b);
-        if (dr <= TOLERANCE && dg <= TOLERANCE && db <= TOLERANCE) {
-          matchCount++;
-        }
+        const pixelHsl = rgbToHsl(data[i], data[i + 1], data[i + 2]);
+        if (pixelHsl.s < MIN_SATURATION) continue;
+        comparablePixels++;
+        const hueDiff = Math.abs(pixelHsl.h - targetHsl.h);
+        const circularDiff = Math.min(hueDiff, 360 - hueDiff);
+        if (circularDiff <= HUE_TOLERANCE) matchCount++;
       }
-      const pct = (matchCount / totalPixels) * 100;
+      const denominator = comparablePixels > 0 ? comparablePixels : totalPixels;
+      const pct = (matchCount / denominator) * 100;
       URL.revokeObjectURL(url);
       resolve({ matchPercentage: Math.round(pct * 10) / 10, passed: pct >= THRESHOLD });
     };
