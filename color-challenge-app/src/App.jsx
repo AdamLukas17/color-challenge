@@ -453,7 +453,7 @@ function ResultsScreen({ results, previews = [], todayColor, onReset }) {
   const passCount = results.filter((r) => r.passed).length;
   const allPassed = passCount === MAX_PHOTOS;
 
-  const shareText = `🎨 Color Challenge ${getLocalDateStr()}\n\n${todayColor.hex} ${todayColor.name}\n\n${results.map((r) => (r.passed ? "🟢" : "🔴")).join("")} ${passCount}/${MAX_PHOTOS}`;
+  const shareText = `🎨 Color Snap ${getLocalDateStr()}\n\n${todayColor.hex} ${todayColor.name}\n\n${results.map((r) => (r.passed ? "🟢" : "🔴")).join("")} ${passCount}/${MAX_PHOTOS}`;
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -721,7 +721,7 @@ export default function App() {
               boxShadow: `0 2px 8px ${todayColor.hex}44`,
             }} />
             <div>
-              <div style={{ fontSize: "17px", fontWeight: 700, letterSpacing: "-0.3px" }}>Chromatic</div>
+              <div style={{ fontSize: "17px", fontWeight: 700, letterSpacing: "-0.3px" }}>Color Snap</div>
               <div style={{ fontSize: "11px", color: theme.textTertiary, fontWeight: 500 }}>daily color challenge</div>
             </div>
           </div>
