@@ -1,10 +1,12 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 
 /* ─── Constants ─── */
-const HUE_TOLERANCE = 30;    // degrees — allows same color family, rejects adjacent families
 const MIN_SATURATION = 0.15; // skip near-gray pixels (hue is undefined/unstable for achromatic colors)
-const THRESHOLD = 1;
-const MAX_PHOTOS = 3;
+
+const DIFFICULTY = {
+  easy: { label: "Easy", photos: 3, hueTolerance: 30, satTolerance: 0.4, lightTolerance: 0.35, threshold: 3, emoji: "😊", desc: "Wide color tolerance, 3 photos" },
+  hard: { label: "Hard", photos: 5, hueTolerance: 20, satTolerance: 0.3, lightTolerance: 0.25, threshold: 5, emoji: "🔥", desc: "Tight color tolerance, 5 photos" },
+};
 
 /* ─── Curated Color Palette (~100 interesting, photographable colors) ─── */
 const PALETTE = [
@@ -172,7 +174,7 @@ function getTimeRemaining() {
 }
 
 /* ─── Image Analysis (client-side via Canvas, easily portable to server) ─── */
-function analyzeImage(file, targetHex) {
+function analyzeImage(file, targetHex, { hueTolerance = 30, satTolerance = 0.4, lightTolerance = 0.35, threshold = 3 } = {}) {
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
@@ -196,12 +198,15 @@ function analyzeImage(file, targetHex) {
         comparablePixels++;
         const hueDiff = Math.abs(pixelHsl.h - targetHsl.h);
         const circularDiff = Math.min(hueDiff, 360 - hueDiff);
-        if (circularDiff <= HUE_TOLERANCE) matchCount++;
+        if (circularDiff > hueTolerance) continue;
+        if (Math.abs(pixelHsl.s - targetHsl.s) > satTolerance) continue;
+        if (Math.abs(pixelHsl.l - targetHsl.l) > lightTolerance) continue;
+        matchCount++;
       }
       const denominator = comparablePixels > 0 ? comparablePixels : totalPixels;
       const pct = (matchCount / denominator) * 100;
       URL.revokeObjectURL(url);
-      resolve({ matchPercentage: Math.round(pct * 10) / 10, passed: pct >= THRESHOLD });
+      resolve({ matchPercentage: Math.round(pct * 10) / 10, passed: pct >= threshold });
     };
     img.src = url;
   });
@@ -320,7 +325,43 @@ function Button({ children, onClick, variant = "primary", disabled = false, styl
 
 /* ─── Screens ─── */
 
+function DifficultyPicker({ onSelect }) {
+  return (
+    <Card>
+      <div style={{ textAlign: "center", marginBottom: "20px" }}>
+        <div style={{ fontSize: "13px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "2px", color: theme.textTertiary, marginBottom: "8px" }}>
+          Choose Difficulty
+        </div>
+        <div style={{ fontSize: "14px", color: theme.textSecondary }}>
+          Pick your challenge level for today
+        </div>
+      </div>
+      <div style={{ display: "flex", flexDirection: "column", gap: "12px" }}>
+        {Object.entries(DIFFICULTY).map(([key, diff]) => (
+          <button key={key} onClick={() => onSelect(key)} style={{
+            display: "flex", alignItems: "center", gap: "16px",
+            padding: "18px 20px", borderRadius: theme.radiusSm,
+            background: theme.surface, border: `2px solid ${theme.border}`,
+            cursor: "pointer", textAlign: "left", fontFamily: theme.font,
+            transition: "all 0.2s ease",
+          }}
+          onMouseOver={(e) => { e.currentTarget.style.borderColor = theme.text; e.currentTarget.style.background = theme.surfaceAlt; }}
+          onMouseOut={(e) => { e.currentTarget.style.borderColor = theme.border; e.currentTarget.style.background = theme.surface; }}
+          >
+            <span style={{ fontSize: "28px" }}>{diff.emoji}</span>
+            <div>
+              <div style={{ fontSize: "16px", fontWeight: 700, color: theme.text, marginBottom: "2px" }}>{diff.label}</div>
+              <div style={{ fontSize: "13px", color: theme.textSecondary }}>{diff.desc}</div>
+            </div>
+          </button>
+        ))}
+      </div>
+    </Card>
+  );
+}
+
 function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
+  const [difficulty, setDifficulty] = useState(existingSubmission?.difficulty || null);
   const [photos, setPhotos] = useState([]);
   const [results, setResults] = useState(existingSubmission?.results || null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -329,14 +370,17 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   const [hasReset, setHasReset] = useState(false);
   const fileRef = useRef(null);
 
+  const config = difficulty ? DIFFICULTY[difficulty] : null;
+  const maxPhotos = config?.photos || 3;
+
   const addFiles = useCallback((files) => {
-    const newFiles = Array.from(files).filter(f => f.type.startsWith("image/")).slice(0, MAX_PHOTOS - photos.length);
+    const newFiles = Array.from(files).filter(f => f.type.startsWith("image/")).slice(0, maxPhotos - photos.length);
     if (newFiles.length === 0) return;
-    const newPhotos = [...photos, ...newFiles].slice(0, MAX_PHOTOS);
+    const newPhotos = [...photos, ...newFiles].slice(0, maxPhotos);
     setPhotos(newPhotos);
     const newPreviews = newPhotos.map((f) => URL.createObjectURL(f));
     setPreviews((old) => { old.forEach(URL.revokeObjectURL); return newPreviews; });
-  }, [photos]);
+  }, [photos, maxPhotos]);
 
   const handleFileInput = (e) => { if (e.target.files) addFiles(e.target.files); };
 
@@ -353,17 +397,18 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
       reader.readAsDataURL(f);
     });
     const [res, dataUrls] = await Promise.all([
-      Promise.all(photos.map((f) => analyzeImage(f, todayColor.hex))),
+      Promise.all(photos.map((f) => analyzeImage(f, todayColor.hex, config))),
       Promise.all(photos.map(readDataUrl)),
     ]);
     submitPreviewsRef.current = dataUrls;
     setResults(res);
     setAnalyzing(false);
-    onComplete(res);
+    onComplete(res, difficulty);
   };
 
   const handleReset = () => {
     setResults(null);
+    setDifficulty(null);
     submitPreviewsRef.current = [];
     setPhotos([]);
     setPreviews((old) => { old.forEach(URL.revokeObjectURL); return []; });
@@ -371,11 +416,27 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   };
 
   if (results) {
-    return <ResultsScreen results={results} previews={submitPreviewsRef.current} todayColor={todayColor} onReset={handleReset} />;
+    return <ResultsScreen results={results} previews={submitPreviewsRef.current} todayColor={todayColor} onReset={handleReset} difficulty={difficulty} />;
   }
 
   if (existingSubmission?.completed && !hasReset) {
-    return <ResultsScreen results={existingSubmission.results} previews={[]} todayColor={todayColor} onReset={handleReset} />;
+    return <ResultsScreen results={existingSubmission.results} previews={[]} todayColor={todayColor} onReset={handleReset} difficulty={existingSubmission.difficulty || "easy"} />;
+  }
+
+  if (!difficulty) {
+    return (
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <Card>
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "13px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "2px", color: theme.textTertiary, marginBottom: "20px" }}>
+              Today's Color
+            </div>
+            <ColorSwatch hex={todayColor.hex} name={todayColor.name} large />
+          </div>
+        </Card>
+        <DifficultyPicker onSelect={setDifficulty} />
+      </div>
+    );
   }
 
   return (
@@ -395,10 +456,10 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
 
       <Card>
         <div style={{ fontSize: "13px", fontWeight: 600, textTransform: "uppercase", letterSpacing: "2px", color: theme.textTertiary, marginBottom: "16px" }}>
-          Upload Photos ({photos.length}/{MAX_PHOTOS})
+          Upload Photos ({photos.length}/{maxPhotos})
         </div>
         <div style={{ fontSize: "14px", color: theme.textSecondary, marginBottom: "20px", lineHeight: 1.5 }}>
-          Find <strong>{todayColor.name}</strong> in the real world and upload {MAX_PHOTOS} photos. Each photo just needs a touch of the color somewhere in the frame — we use a wide color tolerance so natural lighting and shades all count!
+          Find <strong>{todayColor.name}</strong> in the real world and upload {maxPhotos} photos.{difficulty === "hard" ? " Tight color matching — only close shades count!" : " Each photo just needs a touch of the color somewhere in the frame — we use a wide color tolerance so natural lighting and shades all count!"}
         </div>
 
         {previews.length > 0 && (
@@ -417,7 +478,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
           </div>
         )}
 
-        {photos.length < MAX_PHOTOS && (
+        {photos.length < maxPhotos && (
           <div style={{ marginBottom: "16px" }}>
             <Button variant="secondary" onClick={() => fileRef.current?.click()}>
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -431,7 +492,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
         <input ref={fileRef} type="file" accept="image/*" multiple onChange={handleFileInput} style={{ display: "none" }} />
 
         <div style={{ display: "flex", gap: "12px", flexWrap: "wrap" }}>
-          {photos.length === MAX_PHOTOS && (
+          {photos.length === maxPhotos && (
             <Button onClick={handleSubmit} disabled={analyzing}>
               {analyzing ? (
                 <>
@@ -449,11 +510,13 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   );
 }
 
-function ResultsScreen({ results, previews = [], todayColor, onReset }) {
+function ResultsScreen({ results, previews = [], todayColor, onReset, difficulty = "easy" }) {
+  const config = DIFFICULTY[difficulty];
   const passCount = results.filter((r) => r.passed).length;
-  const allPassed = passCount === MAX_PHOTOS;
+  const allPassed = passCount === results.length;
 
-  const shareText = `🎨 Color Snap ${getLocalDateStr()}\n\n${todayColor.hex} ${todayColor.name}\n\n${results.map((r) => (r.passed ? "🟢" : "🔴")).join("")} ${passCount}/${MAX_PHOTOS}`;
+  const diffLabel = difficulty === "hard" ? " [Hard Mode]" : "";
+  const shareText = `🎨 Color Snap ${getLocalDateStr()}${diffLabel}\n\n${todayColor.hex} ${todayColor.name}\n\n${results.map((r) => (r.passed ? "🟢" : "🔴")).join("")} ${passCount}/${results.length}`;
 
   const handleShare = async () => {
     if (navigator.share) {
@@ -472,7 +535,7 @@ function ResultsScreen({ results, previews = [], todayColor, onReset }) {
           {allPassed ? "Perfect Score!" : passCount > 0 ? "Nice Work!" : "Keep Trying!"}
         </div>
         <div style={{ fontSize: "14px", color: theme.textSecondary }}>
-          {passCount}/{MAX_PHOTOS} photos passed
+          {passCount}/{results.length} photos passed{difficulty === "hard" ? " — Hard Mode" : ""}
         </div>
       </Card>
 
@@ -629,8 +692,8 @@ function InfoModal({ onClose }) {
         <div style={{ display: "flex", flexDirection: "column", gap: "16px", marginBottom: "28px" }}>
           {[
             { icon: "🎯", title: "Daily Color", desc: "Each day you get a new color to find in the real world." },
-            { icon: "📸", title: "Snap 3 Photos", desc: "Upload 3 photos that contain the day's color anywhere in the frame." },
-            { icon: "✅", title: "Get Scored", desc: "Each photo is analyzed for color accuracy. Try to pass all 3!" },
+            { icon: "📸", title: "Snap Photos", desc: "Upload photos that contain the day's color anywhere in the frame." },
+            { icon: "✅", title: "Get Scored", desc: "Each photo is analyzed for color accuracy. Choose Easy (3 photos) or Hard (5 photos)!" },
             { icon: "🔥", title: "Build a Streak", desc: "Complete challenges daily to build your streak and share results." },
           ].map((item, i) => (
             <div key={i} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
@@ -664,13 +727,13 @@ export default function App() {
     localStorage.setItem(ONBOARDING_KEY, "true");
   };
 
-  const handleComplete = (results) => {
+  const handleComplete = (results, difficulty) => {
     const passCount = results.filter((r) => r.passed).length;
     const newData = {
       ...data,
       submissions: {
         ...data.submissions,
-        [todayStr]: { completed: true, results, passCount, date: todayStr },
+        [todayStr]: { completed: true, results, passCount, date: todayStr, difficulty },
       },
     };
     setData(newData);
