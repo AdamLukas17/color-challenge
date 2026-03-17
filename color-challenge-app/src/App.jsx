@@ -127,10 +127,35 @@ function seededRandom(seed) {
   };
 }
 
+function getWeekStart(dateStr) {
+  const d = new Date(dateStr + "T00:00:00");
+  const day = d.getDay(); // 0=Sun
+  const monday = new Date(d);
+  monday.setDate(d.getDate() - ((day + 6) % 7)); // shift to Monday
+  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
+}
+
 function getColorForDate(dateStr) {
-  const rng = seededRandom(dateStr + "-colorchallenge-v1");
-  const idx = Math.floor(rng() * PALETTE.length);
-  return PALETTE[idx];
+  const weekKey = getWeekStart(dateStr);
+  const d = new Date(dateStr + "T00:00:00");
+  const dayIndex = (d.getDay() + 6) % 7; // 0=Mon, 6=Sun
+
+  // Generate 7 unique colors for the week using the week seed
+  const rng = seededRandom(weekKey + "-colorchallenge-v2");
+  const usedIndices = new Set();
+  const weekColors = [];
+  for (let i = 0; i < 7; i++) {
+    let idx = Math.floor(rng() * PALETTE.length);
+    // Re-roll if we already picked this color this week
+    let attempts = 0;
+    while (usedIndices.has(idx) && attempts < 100) {
+      idx = Math.floor(rng() * PALETTE.length);
+      attempts++;
+    }
+    usedIndices.add(idx);
+    weekColors.push(PALETTE[idx]);
+  }
+  return weekColors[dayIndex];
 }
 
 function hexToRgb(hex) {
