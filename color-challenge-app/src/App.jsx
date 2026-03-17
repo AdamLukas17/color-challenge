@@ -4,8 +4,8 @@ import { useState, useEffect, useCallback, useMemo, useRef } from "react";
 const MIN_SATURATION = 0.15; // skip near-gray pixels (hue is undefined/unstable for achromatic colors)
 
 const DIFFICULTY = {
-  easy: { label: "Easy", photos: 3, hueTolerance: 30, satTolerance: 0.4, lightTolerance: 0.35, threshold: 3, emoji: "😊", desc: "Wide color tolerance, 3 photos" },
-  hard: { label: "Hard", photos: 5, hueTolerance: 20, satTolerance: 0.3, lightTolerance: 0.25, threshold: 5, emoji: "🔥", desc: "Tight color tolerance, 5 photos" },
+  easy: { label: "Easy", photos: 3, hueTolerance: 40, satTolerance: 0.55, lightTolerance: 0.45, threshold: 2, emoji: "😊", desc: "Wide color tolerance, 3 photos" },
+  hard: { label: "Hard", photos: 5, hueTolerance: 25, satTolerance: 0.35, lightTolerance: 0.3, threshold: 4, emoji: "🔥", desc: "Tight color tolerance, 5 photos" },
 };
 
 /* ─── Curated Color Palette (~100 interesting, photographable colors) ─── */
