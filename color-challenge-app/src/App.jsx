@@ -127,35 +127,55 @@ function seededRandom(seed) {
   };
 }
 
-function getWeekStart(dateStr) {
-  const d = new Date(dateStr + "T00:00:00");
-  const day = d.getDay(); // 0=Sun
-  const monday = new Date(d);
-  monday.setDate(d.getDate() - ((day + 6) % 7)); // shift to Monday
-  return `${monday.getFullYear()}-${String(monday.getMonth() + 1).padStart(2, "0")}-${String(monday.getDate()).padStart(2, "0")}`;
+const MIN_CONSECUTIVE_DISTANCE = 100;
+
+function rgbDistance(hex1, hex2) {
+  const c1 = hexToRgb(hex1);
+  const c2 = hexToRgb(hex2);
+  const dr = c1.r - c2.r;
+  const dg = c1.g - c2.g;
+  const db = c1.b - c2.b;
+  return Math.sqrt(dr * dr + dg * dg + db * db);
 }
 
 function getColorForDate(dateStr) {
-  const weekKey = getWeekStart(dateStr);
   const d = new Date(dateStr + "T00:00:00");
-  const dayIndex = (d.getDay() + 6) % 7; // 0=Mon, 6=Sun
+  const year = d.getFullYear();
+  const month = String(d.getMonth() + 1).padStart(2, "0");
+  const monthKey = `${year}-${month}`;
+  const daysInMonth = new Date(year, d.getMonth() + 1, 0).getDate();
+  const dayIndex = d.getDate() - 1; // 0-based
 
-  // Generate 7 unique colors for the week using the week seed
-  const rng = seededRandom(weekKey + "-colorchallenge-v2");
+  // Generate unique colors for the entire month using the month seed.
+  // Consecutive days must be visually distinct (RGB distance >= 100).
+  const rng = seededRandom(monthKey + "-colorchallenge-monthly-v1");
   const usedIndices = new Set();
-  const weekColors = [];
-  for (let i = 0; i < 7; i++) {
+  const monthColors = [];
+  for (let i = 0; i < daysInMonth; i++) {
     let idx = Math.floor(rng() * PALETTE.length);
-    // Re-roll if we already picked this color this week
     let attempts = 0;
-    while (usedIndices.has(idx) && attempts < 100) {
-      idx = Math.floor(rng() * PALETTE.length);
-      attempts++;
+    while (attempts < 200) {
+      if (usedIndices.has(idx)) {
+        idx = Math.floor(rng() * PALETTE.length);
+        attempts++;
+        continue;
+      }
+      // Ensure consecutive days are visually distinct
+      if (monthColors.length > 0) {
+        const prevColor = monthColors[monthColors.length - 1];
+        const candidate = PALETTE[idx];
+        if (rgbDistance(prevColor.hex, candidate.hex) < MIN_CONSECUTIVE_DISTANCE) {
+          idx = Math.floor(rng() * PALETTE.length);
+          attempts++;
+          continue;
+        }
+      }
+      break;
     }
     usedIndices.add(idx);
-    weekColors.push(PALETTE[idx]);
+    monthColors.push(PALETTE[idx]);
   }
-  return weekColors[dayIndex];
+  return monthColors[dayIndex];
 }
 
 function hexToRgb(hex) {
