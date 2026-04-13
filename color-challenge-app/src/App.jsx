@@ -16,35 +16,40 @@ function analyzeImage(file, targetHex, { hueTolerance = 25, satTolerance = 0.55,
   return new Promise((resolve) => {
     const img = new Image();
     const url = URL.createObjectURL(file);
+    const fail = () => { URL.revokeObjectURL(url); resolve({ matchPercentage: 0, passed: false }); };
+    img.onerror = fail;
     img.onload = () => {
-      const canvas = document.createElement("canvas");
-      const maxDim = 400;
-      const scale = Math.min(maxDim / img.width, maxDim / img.height, 1);
-      canvas.width = img.width * scale;
-      canvas.height = img.height * scale;
-      const ctx = canvas.getContext("2d");
-      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
-      const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
-      const target = hexToRgb(targetHex);
-      const targetHsl = rgbToHsl(target.r, target.g, target.b);
-      let matchCount = 0;
-      let comparablePixels = 0;
-      const totalPixels = data.length / 4;
-      for (let i = 0; i < data.length; i += 4) {
-        const pixelHsl = rgbToHsl(data[i], data[i + 1], data[i + 2]);
-        if (pixelHsl.s < MIN_SATURATION) continue;
-        comparablePixels++;
-        const hueDiff = Math.abs(pixelHsl.h - targetHsl.h);
-        const circularDiff = Math.min(hueDiff, 360 - hueDiff);
-        if (circularDiff > hueTolerance) continue;
-        if (Math.abs(pixelHsl.s - targetHsl.s) > satTolerance) continue;
-        if (Math.abs(pixelHsl.l - targetHsl.l) > lightTolerance) continue;
-        matchCount++;
-      }
-      const denominator = comparablePixels > 0 ? comparablePixels : totalPixels;
-      const pct = (matchCount / denominator) * 100;
-      URL.revokeObjectURL(url);
-      resolve({ matchPercentage: Math.round(pct * 10) / 10, passed: pct >= threshold });
+      try {
+        const canvas = document.createElement("canvas");
+        const maxDim = 400;
+        const scale = Math.min(maxDim / img.width, maxDim / img.height, 1);
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext("2d");
+        if (!ctx) { fail(); return; }
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+        const target = hexToRgb(targetHex);
+        const targetHsl = rgbToHsl(target.r, target.g, target.b);
+        let matchCount = 0;
+        let comparablePixels = 0;
+        const totalPixels = data.length / 4;
+        for (let i = 0; i < data.length; i += 4) {
+          const pixelHsl = rgbToHsl(data[i], data[i + 1], data[i + 2]);
+          if (pixelHsl.s < MIN_SATURATION) continue;
+          comparablePixels++;
+          const hueDiff = Math.abs(pixelHsl.h - targetHsl.h);
+          const circularDiff = Math.min(hueDiff, 360 - hueDiff);
+          if (circularDiff > hueTolerance) continue;
+          if (Math.abs(pixelHsl.s - targetHsl.s) > satTolerance) continue;
+          if (Math.abs(pixelHsl.l - targetHsl.l) > lightTolerance) continue;
+          matchCount++;
+        }
+        const denominator = comparablePixels > 0 ? comparablePixels : totalPixels;
+        const pct = (matchCount / denominator) * 100;
+        URL.revokeObjectURL(url);
+        resolve({ matchPercentage: Math.round(pct * 10) / 10, passed: pct >= threshold });
+      } catch { fail(); }
     };
     img.src = url;
   });
@@ -237,19 +242,24 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
 
   const handleSubmit = async () => {
     setAnalyzing(true);
-    const readDataUrl = (f) => new Promise((resolve) => {
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.readAsDataURL(f);
-    });
-    const [res, dataUrls] = await Promise.all([
-      Promise.all(photos.map((f) => analyzeImage(f, todayColor.hex, config))),
-      Promise.all(photos.map(readDataUrl)),
-    ]);
-    submitPreviewsRef.current = dataUrls;
-    setResults(res);
-    setAnalyzing(false);
-    onComplete(res, difficulty);
+    try {
+      const readDataUrl = (f) => new Promise((resolve) => {
+        const reader = new FileReader();
+        reader.onload = (e) => resolve(e.target.result);
+        reader.onerror = () => resolve(null);
+        reader.readAsDataURL(f);
+      });
+      const [res, dataUrls] = await Promise.all([
+        Promise.all(photos.map((f) => analyzeImage(f, todayColor.hex, config))),
+        Promise.all(photos.map(readDataUrl)),
+      ]);
+      submitPreviewsRef.current = dataUrls;
+      setResults(res);
+      setAnalyzing(false);
+      onComplete(res, difficulty);
+    } catch {
+      setAnalyzing(false);
+    }
   };
 
   const handleReset = () => {
