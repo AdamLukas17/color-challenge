@@ -31,11 +31,32 @@ function analyzeImage(file, targetHex, { hueTolerance = 25, satTolerance = 0.55,
         const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
         const target = hexToRgb(targetHex);
         const targetHsl = rgbToHsl(target.r, target.g, target.b);
+        // Chroma-based neutrality test (HSV-style). HSL saturation is
+        // numerically unstable near L=0 or L=1 — Snow White (#FDFFFC) has
+        // HSL.s ≈ 0.98 even though it's perceptually white — so we use the
+        // raw RGB chroma instead.
+        const isNeutral = (r, g, b) => {
+          const maxC = Math.max(r, g, b);
+          if (maxC === 0) return true;
+          const minC = Math.min(r, g, b);
+          return (maxC - minC) / maxC < MIN_SATURATION;
+        };
+        const isNeutralTarget = isNeutral(target.r, target.g, target.b);
         let matchCount = 0;
         let comparablePixels = 0;
         const totalPixels = data.length / 4;
         for (let i = 0; i < data.length; i += 4) {
-          const pixelHsl = rgbToHsl(data[i], data[i + 1], data[i + 2]);
+          const pr = data[i], pg = data[i + 1], pb = data[i + 2];
+          const pixelHsl = rgbToHsl(pr, pg, pb);
+          if (isNeutralTarget) {
+            // Match neutral pixels by lightness alone — hue is unreliable
+            // and HSL saturation is unstable for near-neutral pixels.
+            if (!isNeutral(pr, pg, pb)) continue;
+            comparablePixels++;
+            if (Math.abs(pixelHsl.l - targetHsl.l) > lightTolerance) continue;
+            matchCount++;
+            continue;
+          }
           if (pixelHsl.s < MIN_SATURATION) continue;
           comparablePixels++;
           const hueDiff = Math.abs(pixelHsl.h - targetHsl.h);
