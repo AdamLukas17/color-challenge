@@ -58,7 +58,7 @@ The daily color assignment **must stay in sync** with the Android app at `../col
 - **Seed format:** `"YYYY-MM-colorchallenge-monthly-v1"`
 - **RNG:** `h = Math.imul(31, h) + charCode | 0`, then MurmurHash-like mixing with `0x45d9f3b`
 - **Deduplication:** No repeated colors within same calendar month
-- **Palette:** Must match Android's 114 colors exactly (in `ColorPalette.kt`)
+- **Palette:** Must match Android's 101 colors exactly (in `ColorPalette.kt`)
 
 If you change the algorithm here, you **must** also update `../color-challenge-android/app/src/main/java/com/colorsnap/data/DailyColorGenerator.kt`.
 
