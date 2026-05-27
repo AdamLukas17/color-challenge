@@ -18,6 +18,7 @@ const COLORS = [
 ];
 
 const PLAY_STORE_URL = "https://play.google.com/store/apps/details?id=com.colorsnap.colorchallenge";
+const APP_STORE_URL = "https://apps.apple.com/us/app/color-snap-app/id6768472641";
 
 function luminance(hex) {
   const r = parseInt(hex.slice(1, 3), 16) / 255;
@@ -133,8 +134,8 @@ export default function Landing() {
               </div>
             </a>
 
-            {/* ios — coming soon */}
-            <div className="nav-item disabled">
+            {/* ios */}
+            <a className="nav-item" href={APP_STORE_URL} target="_blank" rel="noreferrer">
               <svg className="icon" viewBox="0 0 36 36" fill="none" stroke="currentColor" strokeWidth="1.2">
                 <rect x="11" y="6" width="14" height="24" rx="2.5" />
                 <line x1="15" y1="9" x2="21" y2="9" />
@@ -142,13 +143,13 @@ export default function Landing() {
               </svg>
               <div>
                 <div className="label">
-                  ios <span className="pill">soon</span>
+                  ios <span className="pill live">live</span>
                 </div>
                 <div className="sub">
-                  app store
+                  <span className="accent">app store</span>
                 </div>
               </div>
-            </div>
+            </a>
 
             {/* about — personal site */}
             <a
