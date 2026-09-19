@@ -111,6 +111,29 @@ export const PALETTE = [
   { hex: "#8ECAE6", name: "Columbia Blue" },
 ];
 
+/* ─── Palette versioning (freeze-forward) ───
+ * Adding colors changes getColorForDate's output for EVERY date, because the
+ * index is seeded by palette length. To avoid retroactively changing the color
+ * on days users already played, new colors only take effect from CUTOVER_MONTH
+ * onward. Months before the cutover keep drawing from the original palette
+ * (PALETTE), so every past and current-month color is frozen.
+ * Keep this logic and the palette arrays identical across web / Android /
+ * iOS app / iOS widget. */
+export const CUTOVER_MONTH = "2026-11"; // YYYY-MM; new colors take effect this month
+
+// New colors for the Nov 2026 update are appended here (never reordered).
+// Empty until the palette-expansion step lands.
+export const PALETTE_ADDITIONS = [];
+
+// V2 = original palette plus the additions, in order.
+export const PALETTE_V2 = [...PALETTE, ...PALETTE_ADDITIONS];
+
+/** Palette in effect for a given "YYYY-MM" month key. Lexicographic comparison
+ *  is correct because keys are zero-padded YYYY-MM. */
+export function paletteForMonth(monthKey) {
+  return monthKey >= CUTOVER_MONTH ? PALETTE_V2 : PALETTE;
+}
+
 export const MIN_CONSECUTIVE_DISTANCE = 100;
 
 /* ─── Seeded Random (deterministic per date) ─── */
@@ -146,24 +169,26 @@ export function getColorForDate(dateStr) {
 
   // Generate unique colors for the entire month using the month seed.
   // Consecutive days must be visually distinct (RGB distance >= 100).
+  // Palette is chosen by month so new colors only appear from CUTOVER_MONTH on.
+  const palette = paletteForMonth(monthKey);
   const rng = seededRandom(monthKey + "-colorchallenge-monthly-v1");
   const usedIndices = new Set();
   const monthColors = [];
   for (let i = 0; i < daysInMonth; i++) {
-    let idx = Math.floor(rng() * PALETTE.length);
+    let idx = Math.floor(rng() * palette.length);
     let attempts = 0;
     while (attempts < 200) {
       if (usedIndices.has(idx)) {
-        idx = Math.floor(rng() * PALETTE.length);
+        idx = Math.floor(rng() * palette.length);
         attempts++;
         continue;
       }
       // Ensure consecutive days are visually distinct
       if (monthColors.length > 0) {
         const prevColor = monthColors[monthColors.length - 1];
-        const candidate = PALETTE[idx];
+        const candidate = palette[idx];
         if (rgbDistance(prevColor.hex, candidate.hex) < MIN_CONSECUTIVE_DISTANCE) {
-          idx = Math.floor(rng() * PALETTE.length);
+          idx = Math.floor(rng() * palette.length);
           attempts++;
           continue;
         }
@@ -171,7 +196,7 @@ export function getColorForDate(dateStr) {
       break;
     }
     usedIndices.add(idx);
-    monthColors.push(PALETTE[idx]);
+    monthColors.push(palette[idx]);
   }
   return monthColors[dayIndex];
 }
