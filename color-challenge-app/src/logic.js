@@ -396,6 +396,7 @@ export function parseImportJson(jsonString, existingSubmissions) {
         matchPercentage: r.matchPercentage,
         passed: r.passed,
       })),
+      ...(sub.targetHex ? { targetHex: sub.targetHex, targetName: sub.targetName } : {}),
     };
   }
   // Merge: keep higher passCount, existing wins ties (has local context)
@@ -437,6 +438,7 @@ export function buildExportObject(submissions) {
         matchPercentage: r.matchPercentage,
         passed: r.passed,
       })),
+      ...(sub.targetHex ? { targetHex: sub.targetHex, targetName: sub.targetName } : {}),
     };
   }
   return exportObj;

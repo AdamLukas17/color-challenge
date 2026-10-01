@@ -323,4 +323,27 @@ describe("buildExportObject", () => {
     expect(obj.colorSnap.version).toBe(1);
     expect(Object.keys(obj.colorSnap.submissions)).toHaveLength(0);
   });
+
+  it("round-trips targetHex and targetName", () => {
+    const subs = {
+      "2026-11-01": {
+        completed: true, date: "2026-11-01", difficulty: "pro", passCount: 1,
+        results: [{ matchPercentage: 7.2, passed: true }],
+        targetHex: "#FFC6FF", targetName: "Pink Lace",
+      },
+    };
+    const result = parseImportJson(JSON.stringify(buildExportObject(subs)), {});
+    expect(result.merged["2026-11-01"].targetHex).toBe("#FFC6FF");
+    expect(result.merged["2026-11-01"].targetName).toBe("Pink Lace");
+  });
+
+  it("omits targetHex for legacy submissions without it", () => {
+    const subs = {
+      "2026-04-01": { completed: true, date: "2026-04-01", difficulty: "easy", passCount: 3, results: [] },
+    };
+    const exported = buildExportObject(subs);
+    expect(exported.colorSnap.submissions["2026-04-01"].targetHex).toBeUndefined();
+    const result = parseImportJson(JSON.stringify(exported), {});
+    expect(result.merged["2026-04-01"].targetHex).toBeUndefined();
+  });
 });

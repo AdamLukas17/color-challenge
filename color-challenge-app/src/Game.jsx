@@ -516,7 +516,8 @@ function CalendarScreen({ submissions, onExport, onImport }) {
             if (!day) return <div key={`e${i}`} />;
             const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
             const sub = submissions[dateStr];
-            const dayColor = getColorForDate(dateStr);
+            // Prefer the color stored at completion time; fall back to recomputing.
+            const dayColor = sub?.targetHex ? { hex: sub.targetHex, name: sub.targetName } : getColorForDate(dateStr);
             const isToday = dateStr === getLocalDateStr();
 
             return (
@@ -630,7 +631,7 @@ export default function Game() {
       ...data,
       submissions: {
         ...data.submissions,
-        [todayStr]: { completed: true, results, passCount, date: todayStr, difficulty },
+        [todayStr]: { completed: true, results, passCount, date: todayStr, difficulty, targetHex: todayColor.hex, targetName: todayColor.name },
       },
     };
     setData(newData);
