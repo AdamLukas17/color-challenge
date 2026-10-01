@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getColorForDate, PALETTE, rgbDistance, MIN_CONSECUTIVE_DISTANCE } from "../logic.js";
+import { getColorForDate, PALETTE, PALETTE_V2, rgbDistance, MIN_CONSECUTIVE_DISTANCE } from "../logic.js";
 
 describe("getColorForDate", () => {
   it("returns an object with hex and name", () => {
@@ -59,7 +59,7 @@ describe("getColorForDate", () => {
   it("handles February leap year (29 days)", () => {
     const color = getColorForDate("2028-02-29");
     expect(color).toHaveProperty("hex");
-    const inPalette = PALETTE.some((p) => p.hex === color.hex);
+    const inPalette = PALETTE_V2.some((p) => p.hex === color.hex);
     expect(inPalette).toBe(true);
   });
 
@@ -87,6 +87,20 @@ describe("getColorForDate", () => {
 
   it("palette has exactly 101 colors", () => {
     expect(PALETTE.length).toBe(101);
+  });
+
+  it("V2 palette has 201 colors (101 original + 100 additions)", () => {
+    expect(PALETTE_V2.length).toBe(201);
+  });
+
+  it("post-cutover month draws from new colors and stays unique/distinct", () => {
+    const hexes = [];
+    for (let day = 1; day <= 30; day++) {
+      hexes.push(getColorForDate(`2026-11-${String(day).padStart(2, "0")}`).hex);
+    }
+    expect(new Set(hexes).size).toBe(30); // no repeats within the month
+    const usesNewColor = hexes.some((h) => !PALETTE.some((p) => p.hex === h));
+    expect(usesNewColor).toBe(true); // at least one of the 100 new colors appears
   });
 
   it("all palette entries have valid hex and name", () => {

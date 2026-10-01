@@ -123,7 +123,108 @@ export const CUTOVER_MONTH = "2026-11"; // YYYY-MM; new colors take effect this 
 
 // New colors for the Nov 2026 update are appended here (never reordered).
 // Empty until the palette-expansion step lands.
-export const PALETTE_ADDITIONS = [];
+export const PALETTE_ADDITIONS = [
+  { hex: "#8E0B21", name: "Oxblood" },
+  { hex: "#993344", name: "Garnet" },
+  { hex: "#AB2521", name: "Maroon" },
+  { hex: "#EC3013", name: "Carmine" },
+  { hex: "#CC6677", name: "Ruby" },
+  { hex: "#DE6654", name: "Poppy" },
+  { hex: "#D98C99", name: "Candy Apple" },
+  { hex: "#8E320B", name: "Umber" },
+  { hex: "#8E5E0B", name: "Terracotta" },
+  { hex: "#BD430F", name: "Copper" },
+  { hex: "#996B33", name: "Persimmon" },
+  { hex: "#BF8640", name: "Ember" },
+  { hex: "#D69729", name: "Clementine" },
+  { hex: "#8E7C0B", name: "Bronze" },
+  { hex: "#BD870F", name: "Caramel" },
+  { hex: "#998B33", name: "Ochre" },
+  { hex: "#BDA60F", name: "Brass" },
+  { hex: "#BFA740", name: "Mustard" },
+  { hex: "#D6B529", name: "Honey" },
+  { hex: "#A2AB21", name: "Dijon" },
+  { hex: "#ECDA13", name: "Citrine" },
+  { hex: "#D3D629", name: "Harvest" },
+  { hex: "#F0E142", name: "Dandelion" },
+  { hex: "#CACC66", name: "Lemon" },
+  { hex: "#D9D28C", name: "Canary" },
+  { hex: "#72AB21", name: "Avocado" },
+  { hex: "#B6EC13", name: "Lemongrass" },
+  { hex: "#80EC13", name: "Pear" },
+  { hex: "#C4F042", name: "Citron" },
+  { hex: "#99F042", name: "Wasabi" },
+  { hex: "#DEF471", name: "Celery" },
+  { hex: "#66BF40", name: "Fir" },
+  { hex: "#54EC13", name: "Hunter" },
+  { hex: "#40BF40", name: "Malachite" },
+  { hex: "#29D629", name: "Emerald" },
+  { hex: "#13EC13", name: "Shamrock" },
+  { hex: "#40BF66", name: "Kelly" },
+  { hex: "#13EC54", name: "Clover" },
+  { hex: "#339961", name: "Spruce" },
+  { hex: "#0FBD5D", name: "Viridian" },
+  { hex: "#29D682", name: "Myrtle" },
+  { hex: "#66CC94", name: "Spearmint" },
+  { hex: "#42F090", name: "Verdant" },
+  { hex: "#7EE7AD", name: "Parakeet" },
+  { hex: "#0FBDB7", name: "Deepwater" },
+  { hex: "#13ECCB", name: "Lagoon" },
+  { hex: "#29D6D0", name: "Verdigris" },
+  { hex: "#13E6EC", name: "Peacock" },
+  { hex: "#66CCBD", name: "Patina" },
+  { hex: "#7EE7D7", name: "Oasis" },
+  { hex: "#71F4EF", name: "Caribbean" },
+  { hex: "#0B818E", name: "Deep Cyan" },
+  { hex: "#40ACBF", name: "Glacier" },
+  { hex: "#29B4D6", name: "Capri" },
+  { hex: "#13C1EC", name: "Tiffany" },
+  { hex: "#66ADCC", name: "Robin Egg" },
+  { hex: "#71D3F4", name: "Celeste" },
+  { hex: "#335E99", name: "Deep Azure" },
+  { hex: "#0F58BD", name: "Azure" },
+  { hex: "#1393EC", name: "Larkspur" },
+  { hex: "#136DEC", name: "Denim" },
+  { hex: "#429FF0", name: "Cornflower Blue" },
+  { hex: "#71AFF4", name: "Bluebell" },
+  { hex: "#184081", name: "Sapphire" },
+  { hex: "#2137AB", name: "Cobalt" },
+  { hex: "#4067BF", name: "Admiral" },
+  { hex: "#1346EC", name: "Zaffre" },
+  { hex: "#6685CC", name: "Lapis" },
+  { hex: "#8CA4D9", name: "Blueberry" },
+  { hex: "#7186F4", name: "Danube" },
+  { hex: "#180FBD", name: "Inkwell" },
+  { hex: "#473399", name: "Ultramarine" },
+  { hex: "#4640BF", name: "Iris" },
+  { hex: "#3129D6", name: "Delphinium" },
+  { hex: "#4F13EC", name: "Hyacinth" },
+  { hex: "#6C40BF", name: "Blue Violet" },
+  { hex: "#9213EC", name: "Blackberry" },
+  { hex: "#9440BF", name: "Grape" },
+  { hex: "#A829D6", name: "Amethyst" },
+  { hex: "#9266CC", name: "Heather" },
+  { hex: "#AF54DE", name: "Mauve" },
+  { hex: "#AC7EE7", name: "Orchid" },
+  { hex: "#8A3399", name: "Eggplant" },
+  { hex: "#A921AB", name: "Aubergine" },
+  { hex: "#CB13EC", name: "Byzantium" },
+  { hex: "#BD40BF", name: "Royal Purple" },
+  { hex: "#D642F0", name: "Mulberry" },
+  { hex: "#CC66C7", name: "Pansy" },
+  { hex: "#BD0F90", name: "Wine Berry" },
+  { hex: "#99336F", name: "Cerise" },
+  { hex: "#EC13C4", name: "Fuchsia" },
+  { hex: "#D629A9", name: "Fandango" },
+  { hex: "#BF4095", name: "Peony" },
+  { hex: "#F042D0", name: "Shocking Pink" },
+  { hex: "#73264E", name: "Mulberry Pink" },
+  { hex: "#BD0F69", name: "Punch" },
+  { hex: "#D62975", name: "Bubblegum" },
+  { hex: "#CC669B", name: "Carnation" },
+  { hex: "#F0429C", name: "Taffy" },
+  { hex: "#F471B5", name: "Petal" },
+];
 
 // V2 = original palette plus the additions, in order.
 export const PALETTE_V2 = [...PALETTE, ...PALETTE_ADDITIONS];
@@ -171,29 +272,34 @@ export function getColorForDate(dateStr) {
   // Consecutive days must be visually distinct (RGB distance >= 100).
   // Palette is chosen by month so new colors only appear from CUTOVER_MONTH on.
   const palette = paletteForMonth(monthKey);
+
+  // From the cutover onward, day 1 must also be visually distinct from the
+  // previous month's last day (cross-month diversity), matching iOS. Before the
+  // cutover this stays null so the original pre-cutover colors are preserved.
+  let crossMonthPrev = null;
+  if (dayIndex === 0 && monthKey >= CUTOVER_MONTH) {
+    const prevDay = new Date(d);
+    prevDay.setDate(0); // rolls back to the last day of the previous month
+    const py = prevDay.getFullYear();
+    const pm = String(prevDay.getMonth() + 1).padStart(2, "0");
+    const pd = String(prevDay.getDate()).padStart(2, "0");
+    crossMonthPrev = getColorForDate(`${py}-${pm}-${pd}`);
+  }
+
   const rng = seededRandom(monthKey + "-colorchallenge-monthly-v1");
   const usedIndices = new Set();
   const monthColors = [];
   for (let i = 0; i < daysInMonth; i++) {
+    const prevColor = i === 0 ? crossMonthPrev : monthColors[monthColors.length - 1];
     let idx = Math.floor(rng() * palette.length);
     let attempts = 0;
-    while (attempts < 200) {
-      if (usedIndices.has(idx)) {
-        idx = Math.floor(rng() * palette.length);
-        attempts++;
-        continue;
-      }
-      // Ensure consecutive days are visually distinct
-      if (monthColors.length > 0) {
-        const prevColor = monthColors[monthColors.length - 1];
-        const candidate = palette[idx];
-        if (rgbDistance(prevColor.hex, candidate.hex) < MIN_CONSECUTIVE_DISTANCE) {
-          idx = Math.floor(rng() * palette.length);
-          attempts++;
-          continue;
-        }
-      }
-      break;
+    while (
+      attempts < 200 &&
+      (usedIndices.has(idx) ||
+        (prevColor && rgbDistance(prevColor.hex, palette[idx].hex) < MIN_CONSECUTIVE_DISTANCE))
+    ) {
+      idx = Math.floor(rng() * palette.length);
+      attempts++;
     }
     usedIndices.add(idx);
     monthColors.push(palette[idx]);
