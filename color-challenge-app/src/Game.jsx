@@ -336,7 +336,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
           Upload Photos ({photos.length}/{maxPhotos})
         </div>
         <div style={{ fontSize: "14px", color: theme.textSecondary, marginBottom: "20px", lineHeight: 1.5 }}>
-          Find <strong>{todayColor.name}</strong> in the real world and upload {maxPhotos} photos.{difficulty === "hard" ? " Tight color matching — only close shades count!" : " Each photo just needs a touch of the color somewhere in the frame — we use a wide color tolerance so natural lighting and shades all count!"}
+          Find <strong>{todayColor.name}</strong> in the real world and upload {maxPhotos} photo{maxPhotos === 1 ? "" : "s"}.{difficulty === "pro" ? " Tightest color matching — one shot, only very close shades count!" : difficulty === "hard" ? " Tight color matching — only close shades count!" : " Each photo just needs a touch of the color somewhere in the frame — we use a wide color tolerance so natural lighting and shades all count!"}
         </div>
 
         {previews.length > 0 && (
