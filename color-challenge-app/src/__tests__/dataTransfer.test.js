@@ -265,7 +265,28 @@ describe("buildExportObject", () => {
     expect(obj.colorSnap.version).toBe(1);
     expect(obj.colorSnap.exportedFrom).toBe("web");
     expect(obj.colorSnap.submissions["2026-04-01"]).toBeDefined();
-    expect(obj.colorSnap.shields).toEqual({ shieldedDates: [], shieldsRemaining: 0 });
+    // No shields passed -> the block is omitted (so phones preserve local shields).
+    expect(obj.colorSnap.shields).toBeUndefined();
+  });
+
+  it("emits a shields block only when shields are provided", () => {
+    const subs = { "2026-04-01": makeSub("2026-04-01", 3) };
+    const shields = { shieldedDates: ["2026-03-30"], shieldsRemaining: 1 };
+    const obj = buildExportObject(subs, shields);
+    expect(obj.colorSnap.shields).toEqual({ shieldedDates: ["2026-03-30"], shieldsRemaining: 1 });
+  });
+
+  it("round-trips shields through parseImportJson", () => {
+    const subs = { "2026-04-01": makeSub("2026-04-01", 3) };
+    const shields = { shieldedDates: ["2026-03-30", "2026-03-29"], shieldsRemaining: 2 };
+    const result = parseImportJson(JSON.stringify(buildExportObject(subs, shields)), {});
+    expect(result.shields).toEqual({ shieldedDates: ["2026-03-30", "2026-03-29"], shieldsRemaining: 2 });
+  });
+
+  it("returns null shields when the file has no shields block", () => {
+    const subs = { "2026-04-01": makeSub("2026-04-01", 3) };
+    const result = parseImportJson(JSON.stringify(buildExportObject(subs)), {});
+    expect(result.shields).toBeNull();
   });
 
   it("includes correct submission fields", () => {

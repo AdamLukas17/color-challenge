@@ -406,11 +406,21 @@ export function parseImportJson(jsonString, existingSubmissions) {
       merged[key] = sub;
     }
   }
+  // Preserve the shields block so the web app can carry it through to a later
+  // export (phone -> web -> phone). null when the file had no shields.
+  const shields = cs.shields && Array.isArray(cs.shields.shieldedDates)
+    ? {
+        shieldedDates: cs.shields.shieldedDates.filter((d) => dateRe.test(d)),
+        shieldsRemaining: cs.shields.shieldsRemaining,
+      }
+    : null;
+
   return {
     merged,
     importedCount: Object.keys(validSubs).length,
     overlapping: Object.keys(validSubs).filter((k) => k in existingSubmissions).length,
     exportedFrom: cs.exportedFrom || "unknown",
+    shields,
   };
 }
 
@@ -418,14 +428,13 @@ export function parseImportJson(jsonString, existingSubmissions) {
  * Build the universal export JSON object (without triggering download).
  * Used by tests and by the UI export function.
  */
-export function buildExportObject(submissions) {
+export function buildExportObject(submissions, shields = null) {
   const exportObj = {
     colorSnap: {
       version: 1,
       exportedAt: new Date().toISOString(),
       exportedFrom: "web",
       submissions: {},
-      shields: { shieldedDates: [], shieldsRemaining: 0 },
     },
   };
   for (const [key, sub] of Object.entries(submissions)) {
@@ -439,6 +448,16 @@ export function buildExportObject(submissions) {
         passed: r.passed,
       })),
       ...(sub.targetHex ? { targetHex: sub.targetHex, targetName: sub.targetName } : {}),
+    };
+  }
+  // Round-trip shields the web app is holding (it has no shield feature of its
+  // own, but preserves the block so phone -> web -> phone transfers keep them).
+  // Omit the block entirely when there's nothing to carry, so phones preserve
+  // their local shields on a Replace instead of seeing an empty block.
+  if (shields && Array.isArray(shields.shieldedDates)) {
+    exportObj.colorSnap.shields = {
+      shieldedDates: shields.shieldedDates,
+      shieldsRemaining: shields.shieldsRemaining ?? 0,
     };
   }
   return exportObj;

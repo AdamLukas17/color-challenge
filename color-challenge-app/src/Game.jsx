@@ -92,8 +92,8 @@ function saveData(data) {
 }
 
 /* ─── Data Export/Import (browser wrappers around logic.js functions) ─── */
-function exportData(submissions) {
-  const exportObj = buildExportObject(submissions);
+function exportData(submissions, shields) {
+  const exportObj = buildExportObject(submissions, shields);
   const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -703,10 +703,11 @@ export default function Game() {
         )}
         {tab === "calendar" && <CalendarScreen
           submissions={data.submissions}
-          onExport={() => exportData(data.submissions)}
+          onExport={() => exportData(data.submissions, data.shields)}
           onImport={(file) => {
             importData(file, data.submissions).then((result) => {
-              const newData = { ...data, submissions: result.merged };
+              // Preserve shields carried in the file so a later export keeps them.
+              const newData = { ...data, submissions: result.merged, shields: result.shields ?? data.shields };
               setData(newData);
               saveData(newData);
               alert(`Imported ${result.importedCount} submissions from ${result.exportedFrom}${result.overlapping > 0 ? ` (${result.overlapping} overlapping — best scores kept)` : ""}`);
