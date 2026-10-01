@@ -274,10 +274,12 @@ export function getColorForDate(dateStr) {
   const palette = paletteForMonth(monthKey);
 
   // From the cutover onward, day 1 must also be visually distinct from the
-  // previous month's last day (cross-month diversity), matching iOS. Before the
+  // previous month's last day (cross-month diversity), matching iOS. Computed
+  // for the whole month (not just day-1 requests) so every day comes from one
+  // consistent generation — otherwise day 1 could collide with day 2. Before the
   // cutover this stays null so the original pre-cutover colors are preserved.
   let crossMonthPrev = null;
-  if (dayIndex === 0 && monthKey >= CUTOVER_MONTH) {
+  if (monthKey >= CUTOVER_MONTH) {
     const prevDay = new Date(d);
     prevDay.setDate(0); // rolls back to the last day of the previous month
     const py = prevDay.getFullYear();
