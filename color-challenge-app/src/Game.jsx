@@ -591,7 +591,7 @@ function InfoModal({ onClose }) {
           {[
             { icon: "🎯", title: "Daily Color", desc: "Each day you get a new color to find in the real world." },
             { icon: "📸", title: "Snap Photos", desc: "Upload photos that contain the day's color anywhere in the frame." },
-            { icon: "✅", title: "Get Scored", desc: "Each photo is analyzed for color accuracy. Choose Easy (3 photos) or Hard (5 photos)!" },
+            { icon: "✅", title: "Get Scored", desc: "Each photo is analyzed for color accuracy. Choose Easy (3 photos), Hard (5 photos), or Pro (1 photo)!" },
             { icon: "🔥", title: "Build a Streak", desc: "Complete challenges daily to build your streak and share results." },
           ].map((item, i) => (
             <div key={i} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
