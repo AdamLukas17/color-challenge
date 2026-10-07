@@ -92,8 +92,8 @@ function saveData(data) {
 }
 
 /* ─── Data Export/Import (browser wrappers around logic.js functions) ─── */
-function exportData(submissions) {
-  const exportObj = buildExportObject(submissions);
+function exportData(submissions, shields) {
+  const exportObj = buildExportObject(submissions, shields);
   const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -336,7 +336,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
           Upload Photos ({photos.length}/{maxPhotos})
         </div>
         <div style={{ fontSize: "14px", color: theme.textSecondary, marginBottom: "20px", lineHeight: 1.5 }}>
-          Find <strong>{todayColor.name}</strong> in the real world and upload {maxPhotos} photos.{difficulty === "hard" ? " Tight color matching — only close shades count!" : " Each photo just needs a touch of the color somewhere in the frame — we use a wide color tolerance so natural lighting and shades all count!"}
+          Find <strong>{todayColor.name}</strong> in the real world and upload {maxPhotos} photo{maxPhotos === 1 ? "" : "s"}.{difficulty === "pro" ? " Tightest color matching — one shot, only very close shades count!" : difficulty === "hard" ? " Tight color matching — only close shades count!" : " Each photo just needs a touch of the color somewhere in the frame — we use a wide color tolerance so natural lighting and shades all count!"}
         </div>
 
         {previews.length > 0 && (
@@ -516,7 +516,8 @@ function CalendarScreen({ submissions, onExport, onImport }) {
             if (!day) return <div key={`e${i}`} />;
             const dateStr = `${viewYear}-${String(viewMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
             const sub = submissions[dateStr];
-            const dayColor = getColorForDate(dateStr);
+            // Prefer the color stored at completion time; fall back to recomputing.
+            const dayColor = sub?.targetHex ? { hex: sub.targetHex, name: sub.targetName } : getColorForDate(dateStr);
             const isToday = dateStr === getLocalDateStr();
 
             return (
@@ -590,7 +591,7 @@ function InfoModal({ onClose }) {
           {[
             { icon: "🎯", title: "Daily Color", desc: "Each day you get a new color to find in the real world." },
             { icon: "📸", title: "Snap Photos", desc: "Upload photos that contain the day's color anywhere in the frame." },
-            { icon: "✅", title: "Get Scored", desc: "Each photo is analyzed for color accuracy. Choose Easy (3 photos) or Hard (5 photos)!" },
+            { icon: "✅", title: "Get Scored", desc: "Each photo is analyzed for color accuracy. Choose Easy (3 photos), Hard (5 photos), or Pro (1 photo)!" },
             { icon: "🔥", title: "Build a Streak", desc: "Complete challenges daily to build your streak and share results." },
           ].map((item, i) => (
             <div key={i} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
@@ -630,7 +631,7 @@ export default function Game() {
       ...data,
       submissions: {
         ...data.submissions,
-        [todayStr]: { completed: true, results, passCount, date: todayStr, difficulty },
+        [todayStr]: { completed: true, results, passCount, date: todayStr, difficulty, targetHex: todayColor.hex, targetName: todayColor.name },
       },
     };
     setData(newData);
@@ -702,10 +703,11 @@ export default function Game() {
         )}
         {tab === "calendar" && <CalendarScreen
           submissions={data.submissions}
-          onExport={() => exportData(data.submissions)}
+          onExport={() => exportData(data.submissions, data.shields)}
           onImport={(file) => {
             importData(file, data.submissions).then((result) => {
-              const newData = { ...data, submissions: result.merged };
+              // Preserve shields carried in the file so a later export keeps them.
+              const newData = { ...data, submissions: result.merged, shields: result.shields ?? data.shields };
               setData(newData);
               saveData(newData);
               alert(`Imported ${result.importedCount} submissions from ${result.exportedFrom}${result.overlapping > 0 ? ` (${result.overlapping} overlapping — best scores kept)` : ""}`);

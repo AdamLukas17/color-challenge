@@ -18,6 +18,23 @@ describe("DIFFICULTY constants", () => {
     expect(DIFFICULTY.hard.threshold).toBe(4);
   });
 
+  it("pro mode has correct tolerances (single photo, tightest)", () => {
+    expect(DIFFICULTY.pro.photos).toBe(1);
+    expect(DIFFICULTY.pro.hueTolerance).toBe(8);
+    expect(DIFFICULTY.pro.satTolerance).toBe(0.2);
+    expect(DIFFICULTY.pro.lightTolerance).toBe(0.18);
+    expect(DIFFICULTY.pro.threshold).toBe(5);
+    expect(DIFFICULTY.pro.label).toBe("Pro");
+  });
+
+  it("pro mode is strictly tighter than hard", () => {
+    expect(DIFFICULTY.pro.hueTolerance).toBeLessThan(DIFFICULTY.hard.hueTolerance);
+    expect(DIFFICULTY.pro.satTolerance).toBeLessThan(DIFFICULTY.hard.satTolerance);
+    expect(DIFFICULTY.pro.lightTolerance).toBeLessThan(DIFFICULTY.hard.lightTolerance);
+    expect(DIFFICULTY.pro.threshold).toBeGreaterThan(DIFFICULTY.hard.threshold);
+    expect(DIFFICULTY.pro.photos).toBeLessThan(DIFFICULTY.hard.photos);
+  });
+
   it("hard mode is strictly tighter than easy", () => {
     expect(DIFFICULTY.hard.hueTolerance).toBeLessThan(DIFFICULTY.easy.hueTolerance);
     expect(DIFFICULTY.hard.satTolerance).toBeLessThan(DIFFICULTY.easy.satTolerance);

@@ -4,6 +4,7 @@ export const MIN_SATURATION = 0.15; // skip near-gray pixels
 export const DIFFICULTY = {
   easy: { label: "Easy", photos: 3, hueTolerance: 25, satTolerance: 0.55, lightTolerance: 0.45, threshold: 2, emoji: "\u{1F60A}", desc: "Wide color tolerance, 3 photos" },
   hard: { label: "Hard", photos: 5, hueTolerance: 15, satTolerance: 0.35, lightTolerance: 0.3, threshold: 4, emoji: "\u{1F525}", desc: "Tight color tolerance, 5 photos" },
+  pro: { label: "Pro", photos: 1, hueTolerance: 8, satTolerance: 0.2, lightTolerance: 0.18, threshold: 5, emoji: "\u{25C6}", desc: "Tightest tolerance, 1 photo" },
 };
 
 /* ─── Curated Color Palette (~100 interesting, photographable colors) ─── */
@@ -111,6 +112,130 @@ export const PALETTE = [
   { hex: "#8ECAE6", name: "Columbia Blue" },
 ];
 
+/* ─── Palette versioning (freeze-forward) ───
+ * Adding colors changes getColorForDate's output for EVERY date, because the
+ * index is seeded by palette length. To avoid retroactively changing the color
+ * on days users already played, new colors only take effect from CUTOVER_MONTH
+ * onward. Months before the cutover keep drawing from the original palette
+ * (PALETTE), so every past and current-month color is frozen.
+ * Keep this logic and the palette arrays identical across web / Android /
+ * iOS app / iOS widget. */
+export const CUTOVER_MONTH = "2026-11"; // YYYY-MM; new colors take effect this month
+
+// New colors for the Nov 2026 update are appended here (never reordered).
+// Empty until the palette-expansion step lands.
+export const PALETTE_ADDITIONS = [
+  { hex: "#8E0B21", name: "Oxblood" },
+  { hex: "#993344", name: "Garnet" },
+  { hex: "#AB2521", name: "Maroon" },
+  { hex: "#EC3013", name: "Carmine" },
+  { hex: "#CC6677", name: "Ruby" },
+  { hex: "#DE6654", name: "Poppy" },
+  { hex: "#D98C99", name: "Candy Apple" },
+  { hex: "#8E320B", name: "Umber" },
+  { hex: "#8E5E0B", name: "Terracotta" },
+  { hex: "#BD430F", name: "Copper" },
+  { hex: "#996B33", name: "Persimmon" },
+  { hex: "#BF8640", name: "Ember" },
+  { hex: "#D69729", name: "Clementine" },
+  { hex: "#8E7C0B", name: "Bronze" },
+  { hex: "#BD870F", name: "Caramel" },
+  { hex: "#998B33", name: "Ochre" },
+  { hex: "#BDA60F", name: "Brass" },
+  { hex: "#BFA740", name: "Mustard" },
+  { hex: "#D6B529", name: "Honey" },
+  { hex: "#A2AB21", name: "Dijon" },
+  { hex: "#ECDA13", name: "Citrine" },
+  { hex: "#D3D629", name: "Harvest" },
+  { hex: "#F0E142", name: "Dandelion" },
+  { hex: "#CACC66", name: "Lemon" },
+  { hex: "#D9D28C", name: "Canary" },
+  { hex: "#72AB21", name: "Avocado" },
+  { hex: "#B6EC13", name: "Lemongrass" },
+  { hex: "#80EC13", name: "Pear" },
+  { hex: "#C4F042", name: "Citron" },
+  { hex: "#99F042", name: "Wasabi" },
+  { hex: "#DEF471", name: "Celery" },
+  { hex: "#66BF40", name: "Fir" },
+  { hex: "#54EC13", name: "Hunter" },
+  { hex: "#40BF40", name: "Malachite" },
+  { hex: "#29D629", name: "Emerald" },
+  { hex: "#13EC13", name: "Shamrock" },
+  { hex: "#40BF66", name: "Kelly" },
+  { hex: "#13EC54", name: "Clover" },
+  { hex: "#339961", name: "Spruce" },
+  { hex: "#0FBD5D", name: "Viridian" },
+  { hex: "#29D682", name: "Myrtle" },
+  { hex: "#66CC94", name: "Spearmint" },
+  { hex: "#42F090", name: "Verdant" },
+  { hex: "#7EE7AD", name: "Parakeet" },
+  { hex: "#0FBDB7", name: "Deepwater" },
+  { hex: "#13ECCB", name: "Lagoon" },
+  { hex: "#29D6D0", name: "Verdigris" },
+  { hex: "#13E6EC", name: "Peacock" },
+  { hex: "#66CCBD", name: "Patina" },
+  { hex: "#7EE7D7", name: "Oasis" },
+  { hex: "#71F4EF", name: "Caribbean" },
+  { hex: "#0B818E", name: "Deep Cyan" },
+  { hex: "#40ACBF", name: "Glacier" },
+  { hex: "#29B4D6", name: "Capri" },
+  { hex: "#13C1EC", name: "Tiffany" },
+  { hex: "#66ADCC", name: "Robin Egg" },
+  { hex: "#71D3F4", name: "Celeste" },
+  { hex: "#335E99", name: "Deep Azure" },
+  { hex: "#0F58BD", name: "Azure" },
+  { hex: "#1393EC", name: "Larkspur" },
+  { hex: "#136DEC", name: "Denim" },
+  { hex: "#429FF0", name: "Cornflower Blue" },
+  { hex: "#71AFF4", name: "Bluebell" },
+  { hex: "#184081", name: "Sapphire" },
+  { hex: "#2137AB", name: "Cobalt" },
+  { hex: "#4067BF", name: "Admiral" },
+  { hex: "#1346EC", name: "Zaffre" },
+  { hex: "#6685CC", name: "Lapis" },
+  { hex: "#8CA4D9", name: "Blueberry" },
+  { hex: "#7186F4", name: "Danube" },
+  { hex: "#180FBD", name: "Inkwell" },
+  { hex: "#473399", name: "Ultramarine" },
+  { hex: "#4640BF", name: "Iris" },
+  { hex: "#3129D6", name: "Delphinium" },
+  { hex: "#4F13EC", name: "Hyacinth" },
+  { hex: "#6C40BF", name: "Blue Violet" },
+  { hex: "#9213EC", name: "Blackberry" },
+  { hex: "#9440BF", name: "Grape" },
+  { hex: "#A829D6", name: "Amethyst" },
+  { hex: "#9266CC", name: "Heather" },
+  { hex: "#AF54DE", name: "Mauve" },
+  { hex: "#AC7EE7", name: "Orchid" },
+  { hex: "#8A3399", name: "Eggplant" },
+  { hex: "#A921AB", name: "Aubergine" },
+  { hex: "#CB13EC", name: "Byzantium" },
+  { hex: "#BD40BF", name: "Royal Purple" },
+  { hex: "#D642F0", name: "Mulberry" },
+  { hex: "#CC66C7", name: "Pansy" },
+  { hex: "#BD0F90", name: "Wine Berry" },
+  { hex: "#99336F", name: "Cerise" },
+  { hex: "#EC13C4", name: "Fuchsia" },
+  { hex: "#D629A9", name: "Fandango" },
+  { hex: "#BF4095", name: "Peony" },
+  { hex: "#F042D0", name: "Shocking Pink" },
+  { hex: "#73264E", name: "Mulberry Pink" },
+  { hex: "#BD0F69", name: "Punch" },
+  { hex: "#D62975", name: "Bubblegum" },
+  { hex: "#CC669B", name: "Carnation" },
+  { hex: "#F0429C", name: "Taffy" },
+  { hex: "#F471B5", name: "Petal" },
+];
+
+// V2 = original palette plus the additions, in order.
+export const PALETTE_V2 = [...PALETTE, ...PALETTE_ADDITIONS];
+
+/** Palette in effect for a given "YYYY-MM" month key. Lexicographic comparison
+ *  is correct because keys are zero-padded YYYY-MM. */
+export function paletteForMonth(monthKey) {
+  return monthKey >= CUTOVER_MONTH ? PALETTE_V2 : PALETTE;
+}
+
 export const MIN_CONSECUTIVE_DISTANCE = 100;
 
 /* ─── Seeded Random (deterministic per date) ─── */
@@ -146,32 +271,41 @@ export function getColorForDate(dateStr) {
 
   // Generate unique colors for the entire month using the month seed.
   // Consecutive days must be visually distinct (RGB distance >= 100).
+  // Palette is chosen by month so new colors only appear from CUTOVER_MONTH on.
+  const palette = paletteForMonth(monthKey);
+
+  // From the cutover onward, day 1 must also be visually distinct from the
+  // previous month's last day (cross-month diversity), matching iOS. Computed
+  // for the whole month (not just day-1 requests) so every day comes from one
+  // consistent generation — otherwise day 1 could collide with day 2. Before the
+  // cutover this stays null so the original pre-cutover colors are preserved.
+  let crossMonthPrev = null;
+  if (monthKey >= CUTOVER_MONTH) {
+    const prevDay = new Date(d);
+    prevDay.setDate(0); // rolls back to the last day of the previous month
+    const py = prevDay.getFullYear();
+    const pm = String(prevDay.getMonth() + 1).padStart(2, "0");
+    const pd = String(prevDay.getDate()).padStart(2, "0");
+    crossMonthPrev = getColorForDate(`${py}-${pm}-${pd}`);
+  }
+
   const rng = seededRandom(monthKey + "-colorchallenge-monthly-v1");
   const usedIndices = new Set();
   const monthColors = [];
   for (let i = 0; i < daysInMonth; i++) {
-    let idx = Math.floor(rng() * PALETTE.length);
+    const prevColor = i === 0 ? crossMonthPrev : monthColors[monthColors.length - 1];
+    let idx = Math.floor(rng() * palette.length);
     let attempts = 0;
-    while (attempts < 200) {
-      if (usedIndices.has(idx)) {
-        idx = Math.floor(rng() * PALETTE.length);
-        attempts++;
-        continue;
-      }
-      // Ensure consecutive days are visually distinct
-      if (monthColors.length > 0) {
-        const prevColor = monthColors[monthColors.length - 1];
-        const candidate = PALETTE[idx];
-        if (rgbDistance(prevColor.hex, candidate.hex) < MIN_CONSECUTIVE_DISTANCE) {
-          idx = Math.floor(rng() * PALETTE.length);
-          attempts++;
-          continue;
-        }
-      }
-      break;
+    while (
+      attempts < 200 &&
+      (usedIndices.has(idx) ||
+        (prevColor && rgbDistance(prevColor.hex, palette[idx].hex) < MIN_CONSECUTIVE_DISTANCE))
+    ) {
+      idx = Math.floor(rng() * palette.length);
+      attempts++;
     }
     usedIndices.add(idx);
-    monthColors.push(PALETTE[idx]);
+    monthColors.push(palette[idx]);
   }
   return monthColors[dayIndex];
 }
@@ -262,6 +396,7 @@ export function parseImportJson(jsonString, existingSubmissions) {
         matchPercentage: r.matchPercentage,
         passed: r.passed,
       })),
+      ...(sub.targetHex ? { targetHex: sub.targetHex, targetName: sub.targetName } : {}),
     };
   }
   // Merge: keep higher passCount, existing wins ties (has local context)
@@ -271,11 +406,21 @@ export function parseImportJson(jsonString, existingSubmissions) {
       merged[key] = sub;
     }
   }
+  // Preserve the shields block so the web app can carry it through to a later
+  // export (phone -> web -> phone). null when the file had no shields.
+  const shields = cs.shields && Array.isArray(cs.shields.shieldedDates)
+    ? {
+        shieldedDates: cs.shields.shieldedDates.filter((d) => dateRe.test(d)),
+        shieldsRemaining: cs.shields.shieldsRemaining,
+      }
+    : null;
+
   return {
     merged,
     importedCount: Object.keys(validSubs).length,
     overlapping: Object.keys(validSubs).filter((k) => k in existingSubmissions).length,
     exportedFrom: cs.exportedFrom || "unknown",
+    shields,
   };
 }
 
@@ -283,14 +428,13 @@ export function parseImportJson(jsonString, existingSubmissions) {
  * Build the universal export JSON object (without triggering download).
  * Used by tests and by the UI export function.
  */
-export function buildExportObject(submissions) {
+export function buildExportObject(submissions, shields = null) {
   const exportObj = {
     colorSnap: {
       version: 1,
       exportedAt: new Date().toISOString(),
       exportedFrom: "web",
       submissions: {},
-      shields: { shieldedDates: [], shieldsRemaining: 0 },
     },
   };
   for (const [key, sub] of Object.entries(submissions)) {
@@ -303,6 +447,17 @@ export function buildExportObject(submissions) {
         matchPercentage: r.matchPercentage,
         passed: r.passed,
       })),
+      ...(sub.targetHex ? { targetHex: sub.targetHex, targetName: sub.targetName } : {}),
+    };
+  }
+  // Round-trip shields the web app is holding (it has no shield feature of its
+  // own, but preserves the block so phone -> web -> phone transfers keep them).
+  // Omit the block entirely when there's nothing to carry, so phones preserve
+  // their local shields on a Replace instead of seeing an empty block.
+  if (shields && Array.isArray(shields.shieldedDates)) {
+    exportObj.colorSnap.shields = {
+      shieldedDates: shields.shieldedDates,
+      shieldsRemaining: shields.shieldsRemaining ?? 0,
     };
   }
   return exportObj;
