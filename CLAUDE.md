@@ -21,10 +21,11 @@ npm run test:watch # Watch mode
 
 ## Architecture
 
-Two source files:
+Main source files:
 
-- **`src/logic.js`** — All pure functions (palette, seeded RNG, color generation, hex/RGB/HSL conversion, streak calculation, import/export parsing). Extracted for testability — no DOM or React dependencies.
-- **`src/App.jsx`** — React UI, screens, Canvas-based image analysis, localStorage persistence, browser-specific import/export wrappers. Imports everything from `logic.js`.
+- **`src/logic.js`** — All pure functions (palette, seeded RNG, color generation, hex/RGB/HSL conversion, streak calculation, import/export parsing, last-N-days helper). Extracted for testability — no DOM or React dependencies.
+- **`src/Game.jsx`** — The game at `/play`: React UI, screens, Canvas-based image analysis, localStorage persistence, browser-specific import/export wrappers. Imports everything from `logic.js`.
+- **`src/App.jsx`** — Router: landing page (`src/Landing.jsx`) at `/`, the game at `/play`.
 
 ### Screens (in `src/Game.jsx`, mirroring the iOS/Android apps since 2.0)
 Tabs: **Challenge / Streak / Settings**. On wide browsers (>= 900px) two adjacent screens show side by side with Streak as the pivot (Challenge | Streak, then Streak | Settings), like the apps' unfolded foldable layout.
