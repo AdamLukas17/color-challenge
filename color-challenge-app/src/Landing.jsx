@@ -30,6 +30,8 @@ function luminance(hex) {
 
 const cap = (s) => s.replace(/\b\w/g, (m) => m.toUpperCase());
 
+const todayLabel = () => new Date().toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
 export default function Landing() {
   const swatchRef = useRef(null);
   const swatchGlowRef = useRef(null);
@@ -187,11 +189,11 @@ export default function Landing() {
           <div className="left">
             <h1>— today's color</h1>
             <p>every day at midnight a new color drops. open the app, point your camera at something that matches, and snap.</p>
-            <p className="dim">two difficulties. monthly streaks. web, iOS, and Android.</p>
+            <p className="dim">three modes: easy, hard and pro. daily streaks with shields. web, iOS, and Android.</p>
             <div className="stat-row">
-              <div className="stat"><span className="num">101</span>colors</div>
+              <div className="stat"><span className="num">200+</span>colors</div>
               <div className="stat"><span className="num">∞</span>days</div>
-              <div className="stat"><span className="num">2</span>modes</div>
+              <div className="stat"><span className="num">3</span>modes</div>
             </div>
           </div>
 
@@ -213,7 +215,7 @@ export default function Landing() {
 
 <text x="30" y="92" fill="#1F4D44" fontFamily="Roboto Flex" fontSize="18" fontWeight="700">Color Snap</text>
               <rect x="208" y="76" width="60" height="22" rx="11" fill="#C7E9DD" />
-              <text x="238" y="91" fill="#1F4D44" fontFamily="Roboto" fontSize="11" fontWeight="500" textAnchor="middle">May 8</text>
+              <text x="238" y="91" fill="#1F4D44" fontFamily="Roboto" fontSize="11" fontWeight="500" textAnchor="middle">{todayLabel()}</text>
               <circle ref={avatarDotRef} className="avatar-dot" cx="294" cy="87" r="11" fill="#E63946" />
 
               <path
@@ -243,20 +245,22 @@ export default function Landing() {
               <text x="30" y="416" fill="#1F4D44" fontFamily="Roboto Flex" fontSize="10" fontWeight="700" letterSpacing="2">CHOOSE DIFFICULTY</text>
               <text x="30" y="438" fill="#5A6E68" fontFamily="Roboto" fontSize="11">Pick your challenge level for today</text>
 
-              <rect x="30" y="452" width="130" height="100" rx="14" fill="#E5ECE7" />
-              <g transform="translate(95 480)">
+              {/* Difficulty cards: Easy / Hard / Pro, as in the 2.0 apps */}
+              <rect x="30" y="452" width="86" height="104" rx="14" fill="#E5ECE7" />
+              <g transform="translate(73 478) scale(0.9)">
                 <circle r="13" fill="none" stroke="#1F4D44" strokeWidth="2" />
                 <circle cx="-4.5" cy="-2" r="1.6" fill="#1F4D44" />
                 <circle cx="4.5" cy="-2" r="1.6" fill="#1F4D44" />
                 <path d="M -6 3.5 Q 0 9.5 6 3.5" stroke="#1F4D44" strokeWidth="2" fill="none" strokeLinecap="round" />
               </g>
-              <text x="95" y="515" fill="#1F4D44" fontFamily="Roboto" fontSize="13" fontWeight="700" textAnchor="middle">Easy</text>
-              <text x="95" y="531" fill="#5A6E68" fontFamily="Roboto" fontSize="9" textAnchor="middle">Wide color tolerance,</text>
-              <text x="95" y="543" fill="#5A6E68" fontFamily="Roboto" fontSize="9" textAnchor="middle">3 photos</text>
+              <text x="73" y="510" fill="#1F4D44" fontFamily="Roboto" fontSize="12" fontWeight="700" textAnchor="middle">Easy</text>
+              <text x="73" y="526" fill="#5A6E68" fontFamily="Roboto" fontSize="8.5" textAnchor="middle">Wide color</text>
+              <text x="73" y="537" fill="#5A6E68" fontFamily="Roboto" fontSize="8.5" textAnchor="middle">tolerance,</text>
+              <text x="73" y="548" fill="#5A6E68" fontFamily="Roboto" fontSize="8.5" textAnchor="middle">3 photos</text>
 
-              <rect x="180" y="452" width="130" height="100" rx="14" fill="#E5ECE7" />
+              <rect x="127" y="452" width="86" height="104" rx="14" fill="#E5ECE7" />
               <g
-                transform="translate(245 480)"
+                transform="translate(170 478) scale(0.9)"
                 stroke="#1F4D44"
                 strokeWidth="1.8"
                 fill="none"
@@ -268,25 +272,44 @@ export default function Landing() {
                 <path d="M -7 -4 Q -4 -4 -4 -1 Q -7 -1 -7 2 Q -4 2 -4 5" />
                 <path d="M 7 -4 Q 4 -4 4 -1 Q 7 -1 7 2 Q 4 2 4 5" />
               </g>
-              <text x="245" y="515" fill="#1F4D44" fontFamily="Roboto" fontSize="13" fontWeight="700" textAnchor="middle">Hard</text>
-              <text x="245" y="531" fill="#5A6E68" fontFamily="Roboto" fontSize="9" textAnchor="middle">Tight color tolerance,</text>
-              <text x="245" y="543" fill="#5A6E68" fontFamily="Roboto" fontSize="9" textAnchor="middle">5 photos</text>
+              <text x="170" y="510" fill="#1F4D44" fontFamily="Roboto" fontSize="12" fontWeight="700" textAnchor="middle">Hard</text>
+              <text x="170" y="526" fill="#5A6E68" fontFamily="Roboto" fontSize="8.5" textAnchor="middle">Tight color</text>
+              <text x="170" y="537" fill="#5A6E68" fontFamily="Roboto" fontSize="8.5" textAnchor="middle">tolerance,</text>
+              <text x="170" y="548" fill="#5A6E68" fontFamily="Roboto" fontSize="8.5" textAnchor="middle">5 photos</text>
 
-              <line x1="14" y1="612" x2="326" y2="612" stroke="#D6DEDA" strokeWidth="1" />
-              <rect x="60" y="618" width="44" height="22" rx="11" fill="#C7E9DD" />
+              <rect x="224" y="452" width="86" height="104" rx="14" fill="#E5ECE7" />
+              <g transform="translate(267 478)" stroke="#1F4D44" strokeWidth="1.8" fill="none" strokeLinecap="round">
+                <circle r="9.5" />
+                <line x1="0" y1="-14" x2="0" y2="-6" />
+                <line x1="0" y1="6" x2="0" y2="14" />
+                <line x1="-14" y1="0" x2="-6" y2="0" />
+                <line x1="6" y1="0" x2="14" y2="0" />
+              </g>
+              <text x="267" y="510" fill="#1F4D44" fontFamily="Roboto" fontSize="12" fontWeight="700" textAnchor="middle">Pro</text>
+              <text x="267" y="526" fill="#5A6E68" fontFamily="Roboto" fontSize="8.5" textAnchor="middle">Tightest</text>
+              <text x="267" y="537" fill="#5A6E68" fontFamily="Roboto" fontSize="8.5" textAnchor="middle">tolerance,</text>
+              <text x="267" y="548" fill="#5A6E68" fontFamily="Roboto" fontSize="8.5" textAnchor="middle">1 photo</text>
+
+              {/* Floating help button */}
+              <circle cx="290" cy="582" r="15" fill="#C7E9DD" />
+              <line x1="290" y1="579" x2="290" y2="588" stroke="#1F4D44" strokeWidth="2.6" strokeLinecap="round" />
+              <circle cx="290" cy="574.5" r="1.6" fill="#1F4D44" />
+
+              {/* Bottom tabs: Challenge (selected) / Streak / Settings */}
+              <line x1="14" y1="604" x2="326" y2="604" stroke="#D6DEDA" strokeWidth="1" />
+              <rect x="60" y="610" width="44" height="20" rx="10" fill="#C7E9DD" />
               <g stroke="#1F4D44" strokeWidth="1.4" fill="none" strokeLinejoin="round">
-                <rect x="74" y="624" width="16" height="10" rx="2" />
-                <rect x="78" y="622" width="8" height="3" rx="0.5" fill="#1F4D44" stroke="none" />
-                <circle cx="82" cy="629" r="2.2" />
+                <rect x="74" y="615" width="16" height="10" rx="2" />
+                <rect x="78" y="613" width="8" height="3" rx="0.5" fill="#1F4D44" stroke="none" />
+                <circle cx="82" cy="620" r="2.2" />
               </g>
-              <g stroke="#1F4D44" strokeWidth="1.4" fill="none">
-                <rect x="162" y="622" width="16" height="14" rx="1.5" />
-                <line x1="162" y1="626" x2="178" y2="626" />
-                <line x1="166" y1="620" x2="166" y2="624" />
-                <line x1="174" y1="620" x2="174" y2="624" />
-              </g>
-              <g transform="translate(258 629)">
-                <g fill="#1F4D44" stroke="none">
+              <text x="82" y="640" fill="#1F4D44" fontFamily="Roboto" fontSize="8.5" fontWeight="700" textAnchor="middle">Challenge</text>
+
+              <path d="M 170 612 C 172 616 177 618 177 623.5 A 7 7 0 0 1 163 623.5 C 163 620.5 165 618.5 166.5 617 C 166.5 619.5 167.5 620.5 169 621 C 169 617.5 168.5 615 170 612 Z" stroke="#5A6E68" strokeWidth="1.4" fill="none" strokeLinejoin="round" />
+              <text x="170" y="640" fill="#5A6E68" fontFamily="Roboto" fontSize="8.5" fontWeight="500" textAnchor="middle">Streak</text>
+
+              <g transform="translate(258 620)">
+                <g fill="#5A6E68" stroke="none">
                   <rect x="-0.9" y="-7.2" width="1.8" height="2.4" />
                   <rect x="-0.9" y="4.8" width="1.8" height="2.4" />
                   <rect x="-7.2" y="-0.9" width="2.4" height="1.8" />
@@ -298,19 +321,22 @@ export default function Landing() {
                     <rect x="4.8" y="-0.9" width="2.4" height="1.8" />
                   </g>
                 </g>
-                <circle r="4.6" fill="#ECF2EE" stroke="#1F4D44" strokeWidth="1.4" />
-                <circle r="1.7" fill="#1F4D44" />
+                <circle r="4.6" fill="#ECF2EE" stroke="#5A6E68" strokeWidth="1.4" />
+                <circle r="1.7" fill="#5A6E68" />
               </g>
+              <text x="258" y="640" fill="#5A6E68" fontFamily="Roboto" fontSize="8.5" fontWeight="500" textAnchor="middle">Settings</text>
             </svg>
           </div>
 
           <div className="right">
             <h1>— how it works</h1>
             <p>upload from your camera roll or shoot live. we sample the photo and score it against today's hue, saturation and lightness.</p>
-            <p className="dim">your pictures saves locally, export and import progress to move between devices.</p>
+            <p className="dim">your photos stay on your device. export and import progress to move between devices.</p>
+            <p className="dim">new in 2.0: pro mode, 100 new colors, a streak tab, reminder alarms, and two-screen layouts for foldables like iPhone Duo and Galaxy Z Fold.</p>
             <div className="stat-row">
               <div className="stat"><span className="num">±25°</span>easy</div>
               <div className="stat"><span className="num">±15°</span>hard</div>
+              <div className="stat"><span className="num">±8°</span>pro</div>
             </div>
           </div>
         </section>
