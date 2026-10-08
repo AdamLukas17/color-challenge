@@ -26,10 +26,14 @@ Two source files:
 - **`src/logic.js`** — All pure functions (palette, seeded RNG, color generation, hex/RGB/HSL conversion, streak calculation, import/export parsing). Extracted for testability — no DOM or React dependencies.
 - **`src/App.jsx`** — React UI, screens, Canvas-based image analysis, localStorage persistence, browser-specific import/export wrappers. Imports everything from `logic.js`.
 
-### Screens
-- **ChallengeScreen** — Daily color + photo upload + analysis
-- **ResultsScreen** — Pass/fail results with share functionality
-- **CalendarScreen** — Monthly calendar with streak tracking + data export/import
+### Screens (in `src/Game.jsx`, mirroring the iOS/Android apps since 2.0)
+Tabs: **Challenge / Streak / Settings**. On wide browsers (>= 900px) two adjacent screens show side by side with Streak as the pivot (Challenge | Streak, then Streak | Settings), like the apps' unfolded foldable layout.
+- **ChallengeScreen** — today's color card + side-by-side difficulty cards, then photo upload + analysis
+- **ResultsScreen** — pass/fail breakdown with share
+- **StreakScreen** — streak count, last 7 days strip (`getLastNDays` in logic.js), "View full calendar"
+- **CalendarView** — monthly grid, opened from the Streak screen
+- **SettingsScreen** — appearance (System/Light/Dark via CSS variables on `:root[data-cs-theme]`), data export/import, links to the apps for reminders, version from package.json
+- No shields or reminders on web (apps only).
 
 ### Key Functions (in `logic.js`)
 - `seededRandom(seed)` — Deterministic RNG (32-bit hash)
@@ -98,7 +102,7 @@ src/__tests__/
 └── difficulty.test.js       #  6 tests — DIFFICULTY constants match Android source of truth
 ```
 
-**90 tests total.** All are pure Node.js tests with no browser or DOM required. Uses `vi.useFakeTimers()` to pin dates for streak/time tests.
+**120 tests total.** All are pure Node.js tests with no browser or DOM required. Uses `vi.useFakeTimers()` to pin dates for streak/time tests.
 
 ### Key test areas
 

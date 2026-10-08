@@ -462,3 +462,16 @@ export function buildExportObject(submissions, shields = null) {
   }
   return exportObj;
 }
+
+/** The `n` days ending with `todayStr` (oldest first), for the Streak screen's
+ *  "Last 7 days" row. Each entry: { dateStr: "YYYY-MM-DD", letter: "M" }. */
+export function getLastNDays(todayStr, n = 7) {
+  const [y, m, d] = todayStr.split("-").map(Number);
+  const out = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const day = new Date(y, m - 1, d - i);
+    const dateStr = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, "0")}-${String(day.getDate()).padStart(2, "0")}`;
+    out.push({ dateStr, letter: "SMTWTFS"[day.getDay()] });
+  }
+  return out;
+}
