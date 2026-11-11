@@ -332,7 +332,7 @@ function DifficultyPicker({ onSelect }) {
   );
 }
 
-function ChallengeScreen({ todayColor, onComplete, existingSubmission, lockedDifficulty = null, onChallengeFriend }) {
+function ChallengeScreen({ todayColor, onComplete, existingSubmission, lockedDifficulty = null, onCancelFriendChallenge, onChallengeFriend }) {
   // lockedDifficulty: playing a friend's challenge, so the level is fixed.
   const [difficulty, setDifficulty] = useState(existingSubmission?.difficulty || lockedDifficulty);
   const [photos, setPhotos] = useState([]);
@@ -428,8 +428,11 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission, lockedDif
           )}
         </div>
         {lockedDifficulty && (
-          <div style={{ fontSize: "13px", fontWeight: 700, color: theme.accent, marginBottom: "8px" }}>
-            Friend challenge: {DIFFICULTY[lockedDifficulty].label}
+          <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "8px", marginBottom: "8px" }}>
+            <span style={{ display: "inline-flex", alignItems: "center", gap: "6px", fontSize: "13px", fontWeight: 700, color: theme.accent }}>
+              {Icon.users(16)} Friend challenge: {DIFFICULTY[lockedDifficulty].label}
+            </span>
+            {onCancelFriendChallenge && <Button variant="ghost" onClick={onCancelFriendChallenge}>Cancel</Button>}
           </div>
         )}
         <div style={{ fontSize: "14px", color: theme.textSecondary, marginBottom: "20px", lineHeight: 1.5 }}>
@@ -780,6 +783,7 @@ function InfoModal({ onClose }) {
             { icon: Icon.camera(20), title: "Snap Photos", desc: "Upload photos that contain the day's color anywhere in the frame." },
             { icon: Icon.check(20), title: "Get Scored", desc: "Each photo is analyzed for color accuracy. Choose Easy (3 photos), Hard (5 photos), or Pro (1 photo)!" },
             { icon: Icon.flame(20), title: "Build a Streak", desc: "Complete challenges daily to build your streak and share results." },
+            { icon: Icon.users(20), title: "Challenge Friends", desc: "Send a link to your result and see who matches the color best." },
           ].map((item, i) => (
             <div key={i} style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
               <div style={{ width: 38, height: 38, borderRadius: "50%", background: theme.mintSoft, color: theme.accent, flexShrink: 0, display: "flex", alignItems: "center", justifyContent: "center" }}>{item.icon}</div>
@@ -853,8 +857,8 @@ function FriendsCard({ received, submissions, todayStr, nickname, onOpen }) {
               <div style={{ width: 36, height: 36, borderRadius: "10px", background: getColorForDate(c.d).hex, flexShrink: 0 }} />
               <div style={{ flex: 1, minWidth: 0 }}>
                 <div style={{ fontSize: "15px", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.n || DEFAULT_FRIEND_NAME}</div>
-                <div style={{ fontSize: "13px", color: theme.textSecondary }}>
-                  {c.d === todayStr ? "Today" : shortDate(c.d)} · {DIFFICULTY[c.m].label} · {c.p}/{c.r.length} · {averageMatch(c.r)}%
+                <div style={{ fontSize: "13px", color: theme.textSecondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                  {c.d === todayStr ? "" : `${shortDate(c.d)} · `}{DIFFICULTY[c.m].label} · {c.p}/{c.r.length} · {averageMatch(c.r)}%
                 </div>
               </div>
               <span style={{ fontSize: "12px", fontWeight: 700, color: st.color, background: st.bg, borderRadius: "999px", padding: "6px 12px", whiteSpace: "nowrap" }}>{st.text}</span>
@@ -877,6 +881,11 @@ function ScoreColumn({ title, result }) {
 }
 
 function ChallengeModal({ payload, linkError, submissions, todayStr, nickname, fromLink, onPlay, onClose }) {
+  useEffect(() => {
+    const onKey = (e) => { if (e.key === "Escape") onClose(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onClose]);
   const res = payload ? decodeChallenge(payload) : null;
   const c = res?.ok ? res.challenge : null;
   const st = c ? challengeState(c, submissions, todayStr, nickname) : null;
@@ -1076,6 +1085,7 @@ export default function Game() {
       <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
         <ChallengeScreen key={playingChallenge?.payload || "daily"} todayColor={todayColor} onComplete={handleComplete}
           existingSubmission={data.submissions[todayStr]} lockedDifficulty={playingChallenge?.m || null}
+          onCancelFriendChallenge={() => setPlayingChallenge(null)}
           onChallengeFriend={challengeFriend} />
         <FriendsCard received={data.received || []} submissions={data.submissions} todayStr={todayStr}
           nickname={data.nickname} onOpen={(payload) => setOpenChallenge({ payload, fromLink: false })} />
