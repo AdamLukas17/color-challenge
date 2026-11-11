@@ -109,7 +109,8 @@ A result is `{d, m, r, p}`. My result comes from my saved submission for date
 4. higher sum of `r` wins (same length, so same as higher average)
 5. otherwise `tie`
 
-Average shown to users: `round(sum(r) / len(r)) / 10`, one decimal.
+Average shown to users: `round(sum(r) / len(r)) / 10`, written with at most one
+decimal and no trailing `.0` (`14.4`, `60`).
 
 ## What to offer for a received challenge
 

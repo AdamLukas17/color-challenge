@@ -6,6 +6,11 @@ import {
   calculateStreak, parseImportJson, buildExportObject, getLastNDays,
 } from "./logic.js";
 import { version as APP_VERSION } from "../package.json";
+import { useLocation, useNavigate } from "react-router-dom";
+import {
+  challengeLink, decodeChallenge, resultFromSubmission, challengeState, averageMatch,
+  mergeReceived, validateNickname, DEFAULT_FRIEND_NAME, NICKNAME_MAX_LENGTH,
+} from "./challenge.js";
 
 /* ─── Pure logic (palette, seeded RNG, color algorithms, streak,
  *     import/export) extracted to logic.js for testability.
@@ -93,8 +98,8 @@ function saveData(data) {
 }
 
 /* ─── Data Export/Import (browser wrappers around logic.js functions) ─── */
-function exportData(submissions, shields) {
-  const exportObj = buildExportObject(submissions, shields);
+function exportData(submissions, shields, challenges) {
+  const exportObj = buildExportObject(submissions, shields, challenges);
   const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -215,6 +220,8 @@ const Icon = {
   scope: (s = 36) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8"/><line x1="12" y1="1" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="23"/><line x1="1" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="23" y2="12"/></svg>,
   clock: (s = 14) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
   shield: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
+  share: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>,
+  users: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 00-3-3.87"/><path d="M16 3.13a4 4 0 010 7.75"/></svg>,
   check: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
   calendar: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
   close: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
@@ -325,8 +332,9 @@ function DifficultyPicker({ onSelect }) {
   );
 }
 
-function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
-  const [difficulty, setDifficulty] = useState(existingSubmission?.difficulty || null);
+function ChallengeScreen({ todayColor, onComplete, existingSubmission, lockedDifficulty = null, onChallengeFriend }) {
+  // lockedDifficulty: playing a friend's challenge, so the level is fixed.
+  const [difficulty, setDifficulty] = useState(existingSubmission?.difficulty || lockedDifficulty);
   const [photos, setPhotos] = useState([]);
   const [results, setResults] = useState(existingSubmission?.results || null);
   const [analyzing, setAnalyzing] = useState(false);
@@ -390,11 +398,11 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   };
 
   if (results) {
-    return <ResultsScreen results={results} previews={submitPreviews} todayColor={todayColor} onReset={handleReset} difficulty={difficulty} />;
+    return <ResultsScreen results={results} previews={submitPreviews} todayColor={todayColor} onReset={handleReset} difficulty={difficulty} onChallengeFriend={onChallengeFriend} />;
   }
 
   if (existingSubmission?.completed && !hasReset) {
-    return <ResultsScreen results={existingSubmission.results} previews={[]} todayColor={todayColor} onReset={handleReset} difficulty={existingSubmission.difficulty || "easy"} />;
+    return <ResultsScreen results={existingSubmission.results} previews={[]} todayColor={todayColor} onReset={handleReset} difficulty={existingSubmission.difficulty || "easy"} onChallengeFriend={onChallengeFriend} />;
   }
 
   if (!difficulty) {
@@ -413,12 +421,17 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
       <Card>
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: "12px", marginBottom: "14px" }}>
           <SectionLabel>Upload Photos ({photos.length}/{maxPhotos})</SectionLabel>
-          {!existingSubmission && (
+          {!existingSubmission && !lockedDifficulty && (
             <Button variant="ghost" onClick={() => { setDifficulty(null); clearPhotos(); }} style={{ whiteSpace: "nowrap", flexShrink: 0 }}>
               {Icon.refresh()} Change difficulty
             </Button>
           )}
         </div>
+        {lockedDifficulty && (
+          <div style={{ fontSize: "13px", fontWeight: 700, color: theme.accent, marginBottom: "8px" }}>
+            Friend challenge: {DIFFICULTY[lockedDifficulty].label}
+          </div>
+        )}
         <div style={{ fontSize: "14px", color: theme.textSecondary, marginBottom: "20px", lineHeight: 1.5 }}>
           Find <strong style={{ color: theme.text }}>{todayColor.name}</strong> in the real world and upload {maxPhotos} photo{maxPhotos === 1 ? "" : "s"}.{difficulty === "pro" ? " Tightest color matching — one shot, only very close shades count!" : difficulty === "hard" ? " Tight color matching — only close shades count!" : " Each photo just needs a touch of the color somewhere in the frame — we use a wide color tolerance so natural lighting and shades all count!"}
         </div>
@@ -463,7 +476,7 @@ function ChallengeScreen({ todayColor, onComplete, existingSubmission }) {
   );
 }
 
-function ResultsScreen({ results, previews = [], todayColor, onReset, difficulty = "easy" }) {
+function ResultsScreen({ results, previews = [], todayColor, onReset, difficulty = "easy", onChallengeFriend }) {
   const passCount = results.filter((r) => r.passed).length;
   const allPassed = passCount === results.length;
 
@@ -524,6 +537,9 @@ function ResultsScreen({ results, previews = [], todayColor, onReset, difficulty
         </div>
         <div style={{ display: "flex", gap: "12px", justifyContent: "center", flexWrap: "wrap" }}>
           <Button onClick={handleShare}>Share Results</Button>
+          {onChallengeFriend && results.length === DIFFICULTY[difficulty].photos && (
+            <Button variant="tonal" onClick={onChallengeFriend}>{Icon.users()} Challenge a friend</Button>
+          )}
           {onReset && <Button variant="secondary" onClick={onReset}>{Icon.refresh()} Try Again</Button>}
         </div>
       </div>
@@ -649,11 +665,45 @@ function CalendarView({ submissions, onClose }) {
   );
 }
 
-function SettingsScreen({ themeMode, onThemeModeChange, onExport, onImport }) {
+function NicknameCard({ nickname, onSave }) {
+  const [draft, setDraft] = useState(nickname || "");
+  const [message, setMessage] = useState(null);
+  const save = () => {
+    const res = validateNickname(draft);
+    if (res.reason === "offensive") { setMessage({ error: true, text: "Please choose a different nickname." }); return; }
+    onSave(res.value);
+    setDraft(res.value);
+    setMessage({ error: false, text: res.value ? "Saved." : `Cleared. You'll show as "${DEFAULT_FRIEND_NAME}".` });
+  };
+  return (
+    <Card>
+      <div style={{ fontSize: "17px", fontWeight: 700, color: theme.text }}>Nickname</div>
+      <div style={{ fontSize: "14px", color: theme.textSecondary, marginTop: "2px", marginBottom: "16px", lineHeight: 1.45 }}>
+        Shown on challenges you send. Optional: without one you appear as "{DEFAULT_FRIEND_NAME}".
+      </div>
+      <div style={{ display: "flex", gap: "10px" }}>
+        <input value={draft} maxLength={NICKNAME_MAX_LENGTH + 10} placeholder={DEFAULT_FRIEND_NAME} aria-label="Nickname"
+          onChange={(e) => { setDraft(e.target.value); setMessage(null); }}
+          onKeyDown={(e) => { if (e.key === "Enter") save(); }}
+          style={{
+            flex: 1, minWidth: 0, fontFamily: theme.font, fontSize: "15px", color: theme.text,
+            background: theme.surfaceAlt, border: `1px solid ${theme.border}`, borderRadius: "14px", padding: "12px 14px",
+          }} />
+        <Button onClick={save} style={{ borderRadius: "14px", padding: "12px 20px" }}>Save</Button>
+      </div>
+      {message && (
+        <div role="status" style={{ fontSize: "13px", marginTop: "10px", color: message.error ? theme.red : theme.textSecondary }}>{message.text}</div>
+      )}
+    </Card>
+  );
+}
+
+function SettingsScreen({ themeMode, onThemeModeChange, onExport, onImport, nickname, onNicknameChange }) {
   const fileInputRef = useRef(null);
   const modes = [["system", "System"], ["light", "Light"], ["dark", "Dark"]];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
+      <NicknameCard nickname={nickname} onSave={onNicknameChange} />
       <Card>
         <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
           <div style={{ color: theme.accent, marginTop: "2px" }}>{Icon.bell()}</div>
@@ -747,6 +797,173 @@ function InfoModal({ onClose }) {
   );
 }
 
+/* ─── Friend challenges ─── */
+
+const shortDate = (d) => new Date(`${d}T12:00:00`).toLocaleDateString("en-US", { month: "short", day: "numeric" });
+
+const OUTCOME_LABEL = {
+  win: "You won", lose: "They won", tie: "Tie", "different-difficulty": "Different level", "different-day": "Different day",
+};
+
+function statusFor(st) {
+  if (st.state === "play") return { text: "Beat it", color: theme.accent, bg: theme.mintSoft };
+  if (st.state === "expired") return { text: "Missed", color: theme.textTertiary, bg: theme.surfaceAlt };
+  const good = st.outcome === "win";
+  const bad = st.outcome === "lose";
+  return {
+    text: OUTCOME_LABEL[st.outcome],
+    color: good ? theme.green : bad ? theme.red : theme.textSecondary,
+    bg: good ? theme.passBg : bad ? theme.failBg : theme.surfaceAlt,
+  };
+}
+
+/** "Can you beat my Color Snap? Turquoise (Hard): 2/5 passed, 14.4% average. <link>" */
+function challengeShareText(result) {
+  const color = getColorForDate(result.d);
+  return `Can you beat my Color Snap? ${color.name} (${DIFFICULTY[result.m].label}): ${result.p}/${result.r.length} passed, ${averageMatch(result.r)}% average. ${challengeLink(result)}`;
+}
+
+async function shareText(text) {
+  if (navigator.share) {
+    try { await navigator.share({ text }); } catch { /* share sheet dismissed */ }
+  } else {
+    try { await navigator.clipboard.writeText(text); alert("Link copied to clipboard!"); } catch { prompt("Copy this link:", text); }
+  }
+}
+
+function FriendsCard({ received, submissions, todayStr, nickname, onOpen }) {
+  const recent = new Set(getLastNDays(todayStr, 7).map((x) => x.dateStr));
+  const items = received
+    .map((payload) => decodeChallenge(payload))
+    .filter((res) => res.ok && recent.has(res.challenge.d))
+    .map((res) => res.challenge);
+  if (!items.length) return null;
+  return (
+    <Card>
+      <SectionLabel style={{ marginBottom: "14px" }}>Friends' challenges</SectionLabel>
+      <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+        {items.map((c) => {
+          const st = statusFor(challengeState(c, submissions, todayStr, nickname));
+          return (
+            <button key={c.payload} onClick={() => onOpen(c.payload)} style={{
+              display: "flex", alignItems: "center", gap: "12px", width: "100%", textAlign: "left",
+              padding: "12px 14px", borderRadius: "16px", border: "none", cursor: "pointer",
+              background: theme.surfaceAlt, fontFamily: theme.font, color: theme.text,
+            }}>
+              <div style={{ width: 36, height: 36, borderRadius: "10px", background: getColorForDate(c.d).hex, flexShrink: 0 }} />
+              <div style={{ flex: 1, minWidth: 0 }}>
+                <div style={{ fontSize: "15px", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{c.n || DEFAULT_FRIEND_NAME}</div>
+                <div style={{ fontSize: "13px", color: theme.textSecondary }}>
+                  {c.d === todayStr ? "Today" : shortDate(c.d)} · {DIFFICULTY[c.m].label} · {c.p}/{c.r.length} · {averageMatch(c.r)}%
+                </div>
+              </div>
+              <span style={{ fontSize: "12px", fontWeight: 700, color: st.color, background: st.bg, borderRadius: "999px", padding: "6px 12px", whiteSpace: "nowrap" }}>{st.text}</span>
+            </button>
+          );
+        })}
+      </div>
+    </Card>
+  );
+}
+
+function ScoreColumn({ title, result }) {
+  return (
+    <div style={{ flex: 1, background: theme.surfaceAlt, borderRadius: "16px", padding: "14px", textAlign: "center", minWidth: 0 }}>
+      <div style={{ fontSize: "13px", fontWeight: 700, color: theme.textSecondary, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
+      <div style={{ fontFamily: theme.mono, fontSize: "26px", fontWeight: 700, color: theme.text, margin: "6px 0 2px" }}>{result.p}/{result.r.length}</div>
+      <div style={{ fontSize: "13px", color: theme.textSecondary }}>{averageMatch(result.r)}% avg · {DIFFICULTY[result.m].label}</div>
+    </div>
+  );
+}
+
+function ChallengeModal({ payload, linkError, submissions, todayStr, nickname, fromLink, onPlay, onClose }) {
+  const res = payload ? decodeChallenge(payload) : null;
+  const c = res?.ok ? res.challenge : null;
+  const st = c ? challengeState(c, submissions, todayStr, nickname) : null;
+  const color = c ? getColorForDate(c.d) : null;
+  const name = c?.n || DEFAULT_FRIEND_NAME;
+  const headline = !c ? "Challenge link problem"
+    : st.state === "play" ? `${name} challenged you`
+    : st.state === "expired" ? `This challenge was for ${shortDate(c.d)}`
+    : st.outcome === "win" ? "You won!"
+    : st.outcome === "lose" ? `${name} won`
+    : st.outcome === "tie" ? "It's a tie"
+    : "Different difficulty";
+
+  return (
+    <div role="dialog" aria-modal="true" aria-label="Friend challenge" style={{
+      position: "fixed", inset: 0, zIndex: 1000, background: "rgba(0,0,0,0.5)",
+      display: "flex", alignItems: "center", justifyContent: "center", padding: "16px",
+      backdropFilter: "blur(4px)", WebkitBackdropFilter: "blur(4px)",
+    }} onClick={onClose}>
+      <div style={{
+        background: theme.surface, borderRadius: "24px", padding: "28px 22px 22px", maxWidth: "420px", width: "100%",
+        boxShadow: theme.shadowLg, position: "relative", maxHeight: "calc(100vh - 32px)", overflowY: "auto",
+      }} onClick={(e) => e.stopPropagation()}>
+        <button onClick={onClose} aria-label="Close" style={{
+          position: "absolute", top: "14px", right: "14px", width: "30px", height: "30px", borderRadius: "50%",
+          background: theme.surfaceAlt, color: theme.textSecondary, border: "none", cursor: "pointer",
+          display: "flex", alignItems: "center", justifyContent: "center", padding: 0,
+        }}>{Icon.close(16)}</button>
+
+        {!c ? (
+          <div style={{ textAlign: "center" }}>
+            <div style={{ fontSize: "22px", fontWeight: 800, color: theme.text, marginBottom: "8px" }}>{headline}</div>
+            <div style={{ fontSize: "14px", color: theme.textSecondary, lineHeight: 1.5 }}>
+              {linkError === "version" ? "This challenge was made with a newer version of Color Snap." : "This link is incomplete or was changed. Ask your friend to send it again."}
+            </div>
+          </div>
+        ) : (
+          <>
+            <div style={{ textAlign: "center", marginBottom: "18px" }}>
+              <div style={{ width: 56, height: 56, borderRadius: "16px", background: color.hex, margin: "0 auto 12px", boxShadow: `0 4px 16px ${color.hex}55` }} />
+              <div style={{ fontSize: "22px", fontWeight: 800, color: theme.text }}>{headline}</div>
+              <div style={{ fontSize: "14px", color: theme.textSecondary, marginTop: "4px" }}>
+                {color.name} · {DIFFICULTY[c.m].label} · {c.d === todayStr ? "Today" : shortDate(c.d)}
+              </div>
+            </div>
+
+            <div style={{ display: "flex", gap: "10px", marginBottom: "18px" }}>
+              {st.state === "compare" && <ScoreColumn title="You" result={st.mine} />}
+              <ScoreColumn title={name} result={c} />
+            </div>
+
+            {st.state === "play" && (
+              <>
+                <div style={{ fontSize: "14px", color: theme.textSecondary, textAlign: "center", marginBottom: "14px", lineHeight: 1.5 }}>
+                  Find {color.name} and play today's challenge on {DIFFICULTY[c.m].label}. Most photos passed wins; the closest average match breaks a tie.
+                </div>
+                <Button onClick={() => onPlay(c)} style={{ width: "100%" }}>Beat it</Button>
+              </>
+            )}
+            {st.state === "compare" && (
+              <Button onClick={() => shareText(challengeShareText({ ...st.mine, n: nickname }))} style={{ width: "100%" }}>
+                {Icon.share()} Send your result back
+              </Button>
+            )}
+            {st.state === "compare" && st.outcome === "different-difficulty" && (
+              <div style={{ fontSize: "13px", color: theme.textSecondary, textAlign: "center", marginTop: "10px" }}>You played a different level that day, so there's no winner.</div>
+            )}
+            {st.state === "expired" && (
+              <div style={{ fontSize: "14px", color: theme.textSecondary, textAlign: "center", lineHeight: 1.5 }}>Past days can't be played. Challenges only count on the day they were made.</div>
+            )}
+          </>
+        )}
+
+        {fromLink && (
+          <div style={{ borderTop: `1px solid ${theme.border}`, marginTop: "20px", paddingTop: "16px", textAlign: "center" }}>
+            <div style={{ fontSize: "13px", color: theme.textSecondary, marginBottom: "10px" }}>Get Color Snap for streaks, reminders and widgets</div>
+            <div style={{ display: "flex", gap: "10px", justifyContent: "center", flexWrap: "wrap" }}>
+              <a href={APP_STORE_URL} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}><Button variant="secondary" style={{ padding: "10px 18px" }}>App Store</Button></a>
+              <a href={PLAY_STORE_URL} target="_blank" rel="noreferrer" style={{ textDecoration: "none" }}><Button variant="secondary" style={{ padding: "10px 18px" }}>Google Play</Button></a>
+            </div>
+          </div>
+        )}
+      </div>
+    </div>
+  );
+}
+
 /* ─── App ─── */
 const SCREENS = ["challenge", "streak", "settings"];
 const TABS = [
@@ -756,10 +973,23 @@ const TABS = [
 ];
 
 export default function Game() {
+  const location = useLocation();
+  const navigate = useNavigate();
   const [tab, setTab] = useState("challenge");
+  // Opened via https://colorsnap.app/c/<payload>: decoded once on mount.
+  const [linkResult] = useState(() => (location.pathname.startsWith("/c/") ? decodeChallenge(location.pathname) : null));
+  // Friend challenge being shown ({ payload, fromLink, error }), and the one
+  // being played (its difficulty is locked until the result is in).
+  const [openChallenge, setOpenChallenge] = useState(() => (linkResult
+    ? { payload: linkResult.ok ? linkResult.challenge.payload : null, fromLink: true, error: linkResult.error }
+    : null));
+  const [playingChallenge, setPlayingChallenge] = useState(null);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [data, setData] = useState(loadData);
-  const [showInfo, setShowInfo] = useState(() => !localStorage.getItem(ONBOARDING_KEY));
+  const [data, setData] = useState(() => {
+    const d = loadData();
+    return linkResult?.ok ? { ...d, received: mergeReceived(d.received, [linkResult.challenge.payload]) } : d;
+  });
+  const [showInfo, setShowInfo] = useState(() => !linkResult && !localStorage.getItem(ONBOARDING_KEY));
   const [themeMode, setThemeMode] = useState(loadThemeMode);
   // Wide browsers get two panes side by side, like the unfolded phones.
   const twoPane = useMediaQuery("(min-width: 900px)");
@@ -774,6 +1004,34 @@ export default function Game() {
     try { localStorage.setItem(THEME_KEY, themeMode); } catch { /* storage unavailable: setting just won't persist */ }
     return () => root.removeAttribute("data-cs-theme");
   }, [themeMode]);
+
+  // Opening https://colorsnap.app/c/<payload>: keep the challenge, show it,
+  // and move the address to /play.
+  useEffect(() => {
+    if (!linkResult) return;
+    if (linkResult.ok) saveData(data);
+    navigate("/play", { replace: true });
+    // Runs once for the link this page was opened with.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [linkResult, navigate]);
+
+  const saveNickname = (nickname) => {
+    const next = { ...data, nickname };
+    setData(next);
+    saveData(next);
+  };
+
+  const challengeFriend = () => {
+    const result = resultFromSubmission(data.submissions[todayStr], data.nickname);
+    if (result) shareText(challengeShareText(result));
+  };
+
+  const playChallenge = (c) => {
+    setPlayingChallenge(c);
+    setOpenChallenge(null);
+    setShowCalendar(false);
+    setTab("challenge");
+  };
 
   const handleCloseInfo = () => {
     setShowInfo(false);
@@ -791,12 +1049,20 @@ export default function Game() {
     };
     setData(newData);
     saveData(newData);
+    // Finished a friend's challenge: show the head-to-head.
+    if (playingChallenge) {
+      setOpenChallenge({ payload: playingChallenge.payload, fromLink: false });
+      setPlayingChallenge(null);
+    }
   };
 
   const handleImport = (file) => {
     importData(file, data.submissions).then((result) => {
       // Preserve shields carried in the file so a later export keeps them.
-      const newData = { ...data, submissions: result.merged, shields: result.shields ?? data.shields };
+      const newData = {
+        ...data, submissions: result.merged, shields: result.shields ?? data.shields,
+        received: mergeReceived(data.received, result.challenges),
+      };
       setData(newData);
       saveData(newData);
       alert(`Imported ${result.importedCount} submissions from ${result.exportedFrom}${result.overlapping > 0 ? ` (${result.overlapping} overlapping — best scores kept)` : ""}`);
@@ -807,14 +1073,21 @@ export default function Game() {
 
   const renderScreen = (id) => {
     if (id === "challenge") return (
-      <ChallengeScreen todayColor={todayColor} onComplete={handleComplete} existingSubmission={data.submissions[todayStr]} />
+      <div style={{ display: "flex", flexDirection: "column", gap: "24px" }}>
+        <ChallengeScreen key={playingChallenge?.payload || "daily"} todayColor={todayColor} onComplete={handleComplete}
+          existingSubmission={data.submissions[todayStr]} lockedDifficulty={playingChallenge?.m || null}
+          onChallengeFriend={challengeFriend} />
+        <FriendsCard received={data.received || []} submissions={data.submissions} todayStr={todayStr}
+          nickname={data.nickname} onOpen={(payload) => setOpenChallenge({ payload, fromLink: false })} />
+      </div>
     );
     if (id === "streak") return (
       <StreakScreen submissions={data.submissions} shieldedDates={data.shields?.shieldedDates} todayStr={todayStr} onOpenCalendar={() => setShowCalendar(true)} />
     );
     return (
       <SettingsScreen themeMode={themeMode} onThemeModeChange={setThemeMode}
-        onExport={() => exportData(data.submissions, data.shields)} onImport={handleImport} />
+        onExport={() => exportData(data.submissions, data.shields, data.received)} onImport={handleImport}
+        nickname={data.nickname || ""} onNicknameChange={saveNickname} />
     );
   };
 
@@ -829,6 +1102,11 @@ export default function Game() {
       <style>{themeCss}</style>
 
       {showInfo && <InfoModal onClose={handleCloseInfo} />}
+      {openChallenge && (
+        <ChallengeModal payload={openChallenge.payload} linkError={openChallenge.error} fromLink={openChallenge.fromLink}
+          submissions={data.submissions} todayStr={todayStr} nickname={data.nickname || ""}
+          onPlay={playChallenge} onClose={() => setOpenChallenge(null)} />
+      )}
 
       <button onClick={() => setShowInfo(true)} aria-label="How to play" style={{
         position: "fixed", bottom: "96px", right: "20px", zIndex: 99,
