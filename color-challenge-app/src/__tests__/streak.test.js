@@ -143,4 +143,26 @@ describe("calculateStreak", () => {
     // Today not completed, skips to yesterday → streak 1
     expect(calculateStreak(subs)).toBe(1);
   });
+
+  // ── Shielded days (imported from a phone) ───────────
+
+  it("a shielded day bridges a missed day", () => {
+    const subs = {
+      "2026-04-07": makeSub("2026-04-07"),
+      "2026-04-05": makeSub("2026-04-05"),
+      "2026-04-04": makeSub("2026-04-04"),
+    };
+    expect(calculateStreak(subs)).toBe(1);
+    expect(calculateStreak(subs, ["2026-04-06"])).toBe(4);
+  });
+
+  it("shielded yesterday keeps the streak alive before today is done", () => {
+    const subs = { "2026-04-05": makeSub("2026-04-05") };
+    expect(calculateStreak(subs, ["2026-04-06"])).toBe(2);
+  });
+
+  it("shields that don't touch the streak are ignored", () => {
+    const subs = { "2026-04-07": makeSub("2026-04-07") };
+    expect(calculateStreak(subs, ["2026-04-01"])).toBe(1);
+  });
 });

@@ -529,8 +529,8 @@ function ResultsScreen({ results, previews = [], todayColor, onReset, difficulty
   );
 }
 
-function StreakScreen({ submissions, todayStr, onOpenCalendar }) {
-  const streak = calculateStreak(submissions);
+function StreakScreen({ submissions, shieldedDates, todayStr, onOpenCalendar }) {
+  const streak = calculateStreak(submissions, shieldedDates);
   const days = getLastNDays(todayStr, 7);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
@@ -805,7 +805,7 @@ export default function Game() {
       <ChallengeScreen todayColor={todayColor} onComplete={handleComplete} existingSubmission={data.submissions[todayStr]} />
     );
     if (id === "streak") return (
-      <StreakScreen submissions={data.submissions} todayStr={todayStr} onOpenCalendar={() => setShowCalendar(true)} />
+      <StreakScreen submissions={data.submissions} shieldedDates={data.shields?.shieldedDates} todayStr={todayStr} onOpenCalendar={() => setShowCalendar(true)} />
     );
     return (
       <SettingsScreen themeMode={themeMode} onThemeModeChange={setThemeMode}
