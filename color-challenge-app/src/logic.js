@@ -350,20 +350,21 @@ export function getTimeRemaining() {
   return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`;
 }
 
-export function calculateStreak(submissions) {
-  let streak = 0;
+/**
+ * Current streak, counting completed days and shielded days (shields bought or
+ * used on a phone and carried over by an import). Matches Android's
+ * calculateStreakFromPersisted: start at today if it's done, else yesterday,
+ * then walk back while each day is completed or shielded.
+ */
+export function calculateStreak(submissions, shieldedDates = []) {
+  const shielded = new Set(shieldedDates);
+  const keyOf = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   const d = new Date();
-  while (true) {
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-    const sub = submissions[key];
-    if (sub && sub.completed) {
-      streak++;
-      d.setDate(d.getDate() - 1);
-    } else if (streak === 0) {
-      d.setDate(d.getDate() - 1);
-      const prevKey = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
-      if (submissions[prevKey]?.completed) { streak++; d.setDate(d.getDate() - 1); } else break;
-    } else { break; }
+  if (!submissions[keyOf(d)]?.completed) d.setDate(d.getDate() - 1);
+  let streak = 0;
+  while (submissions[keyOf(d)]?.completed || shielded.has(keyOf(d))) {
+    streak++;
+    d.setDate(d.getDate() - 1);
   }
   return streak;
 }
