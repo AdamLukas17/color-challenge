@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "fixtures:challenges": "GEN_CHALLENGE_FIXTURES=1 vitest run src/__tests__/challenge.test.js",
     "test:watch": "vitest"
   },
   "dependencies": {
