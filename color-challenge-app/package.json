@@ -1,7 +1,7 @@
 {
   "name": "color-challenge-app",
   "private": true,
-  "version": "2.0.0",
+  "version": "2.1.0",
   "type": "module",
   "scripts": {
     "dev": "vite",
@@ -9,6 +9,7 @@
     "lint": "eslint .",
     "preview": "vite preview",
     "test": "vitest run",
+    "fixtures:challenges": "GEN_CHALLENGE_FIXTURES=1 vitest run src/__tests__/challenge.test.js",
     "test:watch": "vitest"
   },
   "dependencies": {

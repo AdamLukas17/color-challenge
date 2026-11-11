@@ -8,6 +8,8 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Landing />} />
         <Route path="/play" element={<Game />} />
+        {/* Friend challenge links: https://colorsnap.app/c/<payload> */}
+        <Route path="/c/*" element={<Game />} />
       </Routes>
     </BrowserRouter>
   );

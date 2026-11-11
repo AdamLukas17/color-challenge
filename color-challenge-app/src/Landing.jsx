@@ -189,7 +189,7 @@ export default function Landing() {
           <div className="left">
             <h1>— today's color</h1>
             <p>every day at midnight a new color drops. open the app, point your camera at something that matches, and snap.</p>
-            <p className="dim">three modes: easy, hard and pro. daily streaks with shields. web, iOS, and Android.</p>
+            <p className="dim">three modes: easy, hard and pro. daily streaks with shields. challenge friends with a link. web, iOS, and Android.</p>
             <div className="stat-row">
               <div className="stat"><span className="num">200+</span>colors</div>
               <div className="stat"><span className="num">∞</span>days</div>
