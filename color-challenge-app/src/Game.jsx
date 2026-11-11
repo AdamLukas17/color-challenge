@@ -131,7 +131,7 @@ const LIGHT_VARS = `
   --cs-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
   --cs-shadow-lg: 0 4px 16px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
   --cs-accent: #006B60; --cs-on-accent: #FFFFFF; --cs-mint: #A8E5DC; --cs-mint-soft: #E0F2EF;
-  --cs-green: #2E7D32; --cs-red: #C62828;
+  --cs-green: #2E7D32; --cs-red: #C62828; --cs-warning: #E8751A;
   --cs-pass-bg: #E8F5E9; --cs-pass-border: #C8E6C9; --cs-fail-bg: #FFEBEE; --cs-fail-border: #FFCDD2;
 `;
 const DARK_VARS = `
@@ -141,7 +141,7 @@ const DARK_VARS = `
   --cs-shadow: 0 1px 3px rgba(0,0,0,0.5);
   --cs-shadow-lg: 0 4px 16px rgba(0,0,0,0.6);
   --cs-accent: #5FD4C4; --cs-on-accent: #00201C; --cs-mint: #005045; --cs-mint-soft: #0F3A35;
-  --cs-green: #81C784; --cs-red: #EF9A9A;
+  --cs-green: #81C784; --cs-red: #EF9A9A; --cs-warning: #EE8833;
   --cs-pass-bg: #1B3A20; --cs-pass-border: #2E5E35; --cs-fail-bg: #3E1E1E; --cs-fail-border: #6B2C2C;
 `;
 const themeCss = `
@@ -170,6 +170,7 @@ const theme = {
   mintSoft: "var(--cs-mint-soft)",
   green: "var(--cs-green)",
   red: "var(--cs-red)",
+  warning: "var(--cs-warning)",
   passBg: "var(--cs-pass-bg)",
   passBorder: "var(--cs-pass-border)",
   failBg: "var(--cs-fail-bg)",
@@ -213,6 +214,7 @@ const Icon = {
   smile: (s = 36) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><path d="M8 14s1.5 2 4 2 4-2 4-2"/><line x1="9" y1="9" x2="9.01" y2="9"/><line x1="15" y1="9" x2="15.01" y2="9"/></svg>,
   scope: (s = 36) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="8"/><line x1="12" y1="1" x2="12" y2="6"/><line x1="12" y1="18" x2="12" y2="23"/><line x1="1" y1="12" x2="6" y2="12"/><line x1="18" y1="12" x2="23" y2="12"/></svg>,
   clock: (s = 14) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.4" strokeLinecap="round"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg>,
+  shield: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>,
   check: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>,
   calendar: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>,
   close: (s = 18) => <svg width={s} height={s} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>,
@@ -532,6 +534,7 @@ function ResultsScreen({ results, previews = [], todayColor, onReset, difficulty
 function StreakScreen({ submissions, shieldedDates, todayStr, onOpenCalendar }) {
   const streak = calculateStreak(submissions, shieldedDates);
   const days = getLastNDays(todayStr, 7);
+  const shielded = new Set(shieldedDates || []);
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
       <Card style={{ textAlign: "center", padding: "30px 22px" }}>
@@ -545,17 +548,19 @@ function StreakScreen({ submissions, shieldedDates, todayStr, onOpenCalendar }) 
           {days.map(({ dateStr, letter }) => {
             const sub = submissions[dateStr];
             const done = !!sub?.completed;
+            // Same as Android: a shielded (missed but protected) day is orange.
+            const isShielded = !done && shielded.has(dateStr);
             const dayColor = sub?.targetHex || getColorForDate(dateStr).hex;
             const isToday = dateStr === todayStr;
             return (
               <div key={dateStr} style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: "6px" }}>
-                <div title={dateStr} style={{
+                <div title={isShielded ? `${dateStr} (shielded)` : dateStr} style={{
                   width: "100%", aspectRatio: "1", borderRadius: "10px",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  background: done ? dayColor : theme.surfaceAlt,
-                  color: done ? contrastText(dayColor) : "transparent",
-                  border: isToday && !done ? `2px solid ${theme.border}` : "none",
-                }}>{done && Icon.check()}</div>
+                  background: done ? dayColor : isShielded ? theme.warning : theme.surfaceAlt,
+                  color: done ? contrastText(dayColor) : isShielded ? "#FFFFFF" : "transparent",
+                  border: isToday && !done && !isShielded ? `2px solid ${theme.border}` : "none",
+                }}>{done ? Icon.check() : isShielded ? Icon.shield() : null}</div>
                 <span style={{ fontSize: "12px", color: theme.textTertiary, fontWeight: 600 }}>{letter}</span>
               </div>
             );
