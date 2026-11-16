@@ -1,0 +1,12 @@
+{
+  "applinks": {
+    "details": [
+      {
+        "appIDs": ["S6SNMAPWB2.com.colorsnap-app.colorchallenge"],
+        "components": [
+          { "/": "/c/*", "comment": "Friend challenge links" }
+        ]
+      }
+    ]
+  }
+}

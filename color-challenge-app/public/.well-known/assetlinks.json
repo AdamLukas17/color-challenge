@@ -1,0 +1,12 @@
+[
+  {
+    "relation": ["delegate_permission/common.handle_all_urls"],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.colorsnap.colorchallenge",
+      "sha256_cert_fingerprints": [
+        "46:08:DC:C2:AE:F8:A0:93:BA:AC:D1:BA:54:CA:13:82:93:23:7E:75:E8:0B:C6:FB:9B:7F:D5:F7:DA:F6:38:1D"
+      ]
+    }
+  }
+]

@@ -2,9 +2,9 @@
 export const MIN_SATURATION = 0.15; // skip near-gray pixels
 
 export const DIFFICULTY = {
-  easy: { label: "Easy", photos: 3, hueTolerance: 25, satTolerance: 0.55, lightTolerance: 0.45, threshold: 2, emoji: "\u{1F60A}", desc: "Wide color tolerance, 3 photos" },
-  hard: { label: "Hard", photos: 5, hueTolerance: 15, satTolerance: 0.35, lightTolerance: 0.3, threshold: 4, emoji: "\u{1F525}", desc: "Tight color tolerance, 5 photos" },
-  pro: { label: "Pro", photos: 1, hueTolerance: 8, satTolerance: 0.2, lightTolerance: 0.18, threshold: 5, emoji: "\u{25C6}", desc: "Tightest tolerance, 1 photo" },
+  easy: { label: "Easy", photos: 3, hueTolerance: 25, satTolerance: 0.55, lightTolerance: 0.45, threshold: 2, desc: "Wide color tolerance, 3 photos" },
+  hard: { label: "Hard", photos: 5, hueTolerance: 15, satTolerance: 0.35, lightTolerance: 0.3, threshold: 4, desc: "Tight color tolerance, 5 photos" },
+  pro: { label: "Pro", photos: 1, hueTolerance: 8, satTolerance: 0.2, lightTolerance: 0.18, threshold: 5, desc: "Tightest tolerance, 1 photo" },
 };
 
 /* ─── Curated Color Palette (~100 interesting, photographable colors) ─── */
@@ -422,6 +422,9 @@ export function parseImportJson(jsonString, existingSubmissions) {
     overlapping: Object.keys(validSubs).filter((k) => k in existingSubmissions).length,
     exportedFrom: cs.exportedFrom || "unknown",
     shields,
+    // Optional friend-challenge payloads (2.1+). The caller validates and
+    // merges them with mergeReceived() from challenge.js.
+    challenges: Array.isArray(cs.challenges) ? cs.challenges.filter((c) => typeof c === "string") : [],
   };
 }
 
@@ -429,7 +432,7 @@ export function parseImportJson(jsonString, existingSubmissions) {
  * Build the universal export JSON object (without triggering download).
  * Used by tests and by the UI export function.
  */
-export function buildExportObject(submissions, shields = null) {
+export function buildExportObject(submissions, shields = null, challenges = []) {
   const exportObj = {
     colorSnap: {
       version: 1,
@@ -460,6 +463,10 @@ export function buildExportObject(submissions, shields = null) {
       shieldedDates: shields.shieldedDates,
       shieldsRemaining: shields.shieldsRemaining ?? 0,
     };
+  }
+  // Received friend challenges (payload strings), omitted when empty.
+  if (Array.isArray(challenges) && challenges.length) {
+    exportObj.colorSnap.challenges = [...challenges];
   }
   return exportObj;
 }

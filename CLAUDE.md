@@ -36,6 +36,13 @@ Tabs: **Challenge / Streak / Settings**. On wide browsers (>= 900px) two adjacen
 - **SettingsScreen** — appearance (System/Light/Dark via CSS variables on `:root[data-cs-theme]`), data export/import, links to the apps for reminders, version from package.json
 - No shields or reminders on web (apps only).
 
+### Friend challenges (2.1)
+Share links `https://colorsnap.app/c/<payload>`; no server. Spec, shared fixtures and the nickname word lists live in `../shared/friend-challenges/` (also used by the Android and iOS tests).
+- **`src/challenge.js`** is the reference implementation: link encode/decode, nickname sanitize + LDNOOBW filter, `compareResults`, `challengeState`, `mergeReceived`. Changing it means regenerating fixtures (`npm run fixtures:challenges`) and updating Android `FriendChallenge.kt` and iOS `FriendChallenge.swift`.
+- `src/badwords-en.txt` and `src/substring-words.txt` are copies of the shared files (a test keeps them identical).
+- UI in `Game.jsx`: Nickname card in Settings, "Challenge a friend" on Results, `FriendsCard` under the Challenge screen, `ChallengeModal` (play / head-to-head / expired, store buttons when opened from a link). `App.jsx` routes `/c/*` to the game, which decodes the link, stores it in `data.received`, and moves to `/play`.
+- App links: `public/.well-known/apple-app-site-association` and `assetlinks.json`; `vercel.json` serves them as JSON and keeps them out of the SPA rewrite.
+
 ### Key Functions (in `logic.js`)
 - `seededRandom(seed)` — Deterministic RNG (32-bit hash)
 - `getColorForDate(dateStr)` — Returns today's assigned color from the palette
@@ -53,7 +60,7 @@ Tabs: **Challenge / Streak / Settings**. On wide browsers (>= 900px) two adjacen
 ### Data Persistence
 ```javascript
 localStorage key: "color-challenge-data"
-// Structure: { submissions: { "YYYY-MM-DD": { completed, difficulty, results, passCount } } }
+// Structure: { submissions: { "YYYY-MM-DD": { completed, difficulty, results, passCount } }, shields?, nickname?, received?: [payload] }
 ```
 
 ## Critical: Cross-Platform Color Algorithm
@@ -86,7 +93,7 @@ Universal JSON format shared with Android (and future iOS). Photos are excluded 
 - **Export:** `buildExportObject()` in `logic.js` builds the JSON; `exportData()` in `App.jsx` triggers browser download
 - **Import:** `parseImportJson()` in `logic.js` validates, filters invalid date keys, and merges; `importData()` in `App.jsx` wraps it with FileReader
 - **Merge strategy:** Higher `passCount` wins; ties favor local data
-- **Format:** `{ colorSnap: { version: 1, exportedFrom: "web", submissions: {...}, shields: {...} } }`
+- **Format:** `{ colorSnap: { version: 1, exportedFrom: "web", submissions: {...}, shields: {...}, challenges?: [payload] } }`
 
 ## Unit Tests
 
