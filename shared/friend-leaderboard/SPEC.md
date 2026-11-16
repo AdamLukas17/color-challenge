@@ -1,4 +1,4 @@
-# Friend leaderboard (Color Snap 2.2) — DRAFT for review
+# Friend leaderboard (Color Snap 2.2) — DRAFT v2 for review
 
 See how you stack up against friends, built entirely from the challenge links
 people already send each other. No accounts, no server: every phone computes
@@ -10,7 +10,8 @@ Builds on [friend challenges](../friend-challenges/SPEC.md) (2.1). Web
 implementation; Android and iOS must match it, checked against a shared
 `fixtures.json` in this folder (same setup as friend challenges).
 
-Questions for review are marked **[Decide]**. Everything else is a proposal.
+Decided in review: sort by most recent, all-time records, keep every game
+played, friends can be deleted, web gets its own ID, no streak cards.
 
 ## What users see
 
@@ -33,11 +34,12 @@ Days you both played the same difficulty count toward the record.
 - Tapping a row opens that friend's history: each shared day with both scores,
   newest first, plus their recent results you haven't played.
 - Empty state: "Challenge a friend from your results to start a leaderboard."
-- Phase 2 adds each friend's current streak to the row (see Streak cards).
-
-**[Decide] Sort order.** Proposal: most days played together first, then
-your win rate. Alternatives: win rate first (a 1 - 0 friend tops the list), or
-most recent first.
+- **Sort: most recent first**, by the newest day you both played. Friends you
+  haven't played with yet (only their challenges received) come after, by
+  their newest link. Ties sort by name.
+- **Delete a friend:** from their history screen ("Remove Sam") or by swiping
+  the row, with a confirmation ("Remove Sam and your 9 games? This can't be
+  undone."). See Deleting a friend.
 
 ## Friend ID
 
@@ -56,9 +58,17 @@ different "Sam"s stay separate.
   Import with Replace adopts it (moving to a new phone keeps your identity);
   Merge keeps the local one.
 
-**[Decide] Web.** Proposal: the web app gets its own ID too, so someone who
-only uses colorsnap.app still shows up. A person using both web and phone
-would appear as two friends unless they transfer data (Replace copies the ID).
+**Web.** Each browser creates its own random ID the first time it shares a
+link, stored in `localStorage` next to the rest of the web data. It is never
+shared between users. It changes only when:
+- the user clears site data (their whole history is gone too, so they start
+  over everywhere, and friends see a new person);
+- they use a private window (a new ID each private session);
+- they use another browser or device without moving their data (Export, then
+  Import with Replace, copies the ID).
+
+Someone who plays on both the website and a phone shows up as two friends
+unless they transfer data between them.
 
 ## Link change
 
@@ -99,47 +109,34 @@ Input: the received challenge links (stored as today) plus my submissions.
      mine for that day means it isn't shared yet (shown in history, not counted).
 5. **Leader:** more wins leads; equal wins is "Tied".
 
-**[Decide] Time window.** Proposal: all time, so the record keeps growing.
-Alternative: last 30 days, so a bad month doesn't stick forever.
+**Time window: all time.** Records never expire.
 
 ### Storage
 
-- Received links are capped at 50 today, which would cut history short.
-  Raise the cap to 500 (about 50 KB), keeping the newest. Oldest drop first.
+- **Every game is kept.** A received link is a *game* once I have a full
+  result for its day (whatever the outcome, including different difficulty).
+  Games are never pruned.
+- **Unplayed links** (I never played that day) are dropped once they're more
+  than 30 days old, so a pile of old challenges doesn't build up.
+- This replaces 2.1's cap of 50 links. A safety cap of 10,000 links stays, in
+  case something goes wrong; at about 100 bytes each that's under 1 MB, well
+  within web `localStorage` limits.
 - Nothing else is stored: the leaderboard is recomputed from links and
-  submissions, so it can't drift out of sync and export/import already carries
-  it (`colorSnap.challenges`).
+  submissions, so it can't drift out of sync, and export/import already
+  carries it (`colorSnap.challenges`).
 
-## Phase 2 (optional): streak cards
+### Deleting a friend
 
-Records only cover days friends sent you a challenge. A streak card lets a
-friend share their overall progress so it can appear on your leaderboard too.
+- Removes every stored link in that friend's group (all their games and
+  pending challenges). Export afterwards no longer contains them.
+- It's a delete, not a block: if they send a new link later, they appear again
+  as a new row with a fresh record.
+- Nickname-only rows (2.1 links without an ID) delete the same way.
 
-```
-https://colorsnap.app/s/<base64url(json)>.<checksum>
-{"v":1,"t":"2026-11-16","n":"Sam","i":"k3v9x0qz2m","s":14,"k":6,"a":231}
-```
+## Not planned
 
-| Key | Meaning |
-|---|---|
-| `t` | date the card was made |
-| `n`, `i` | nickname and friend ID, as in challenge links |
-| `s` | current streak |
-| `k` | days completed in the 7 days ending `t` |
-| `a` | average match over those days, tenths of a percent |
-
-- Checksum prefix `cs1s:` so a card can never pass as a challenge.
-- Shared from the Streak tab ("Share my streak"). Opening one stores the
-  newest card per friend and shows it on their leaderboard row ("14-day
-  streak, 2 days ago"). A card older than 2 days shows its date instead of
-  implying the streak is current.
-- Web route `/s/<payload>` shows the card with store badges.
-- App links: add `/s/*` to the AASA file and the Android intent filter.
-  2.1 apps ignore links that aren't `/c/`, so on 2.1 a card link just opens
-  the app's main screen.
-
-**[Decide]** Include phase 2 in 2.2, or ship the leaderboard first and add
-streak cards in a later update?
+Streak cards (sharing your current streak so it shows on friends' boards)
+were considered and left out. The leaderboard only uses challenge links.
 
 ## Honest limits
 
@@ -162,8 +159,8 @@ streak cards in a later update?
 ## Work plan (after review)
 
 1. Finalize this spec; generate `fixtures.json` from web tests
-   (grouping, nickname merge, one-result-per-day, records, `i` validation).
+   (grouping, nickname merge, one-result-per-day, records, sort order,
+   pruning of unplayed links, delete, `i` validation).
 2. Web: `leaderboard.js`, friend ID, Friends section, then the apps.
 3. Android and iOS: same, one branch and Draft PR each; tests against the
    shared fixtures; foldable two-pane and dark mode checks.
-4. Phase 2 if approved: card links, `/s/` web route, AASA and intent filter.
