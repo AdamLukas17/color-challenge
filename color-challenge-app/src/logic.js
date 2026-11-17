@@ -423,8 +423,10 @@ export function parseImportJson(jsonString, existingSubmissions) {
     exportedFrom: cs.exportedFrom || "unknown",
     shields,
     // Optional friend-challenge payloads (2.1+). The caller validates and
-    // merges them with mergeReceived() from challenge.js.
+    // stores them with storeReceived() from challenge.js.
     challenges: Array.isArray(cs.challenges) ? cs.challenges.filter((c) => typeof c === "string") : [],
+    // Optional friend ID (2.2+), only when well-formed.
+    friendId: typeof cs.friendId === "string" && /^[0-9a-z]{10}$/.test(cs.friendId) ? cs.friendId : null,
   };
 }
 
@@ -432,7 +434,7 @@ export function parseImportJson(jsonString, existingSubmissions) {
  * Build the universal export JSON object (without triggering download).
  * Used by tests and by the UI export function.
  */
-export function buildExportObject(submissions, shields = null, challenges = []) {
+export function buildExportObject(submissions, shields = null, challenges = [], friendId = null) {
   const exportObj = {
     colorSnap: {
       version: 1,
@@ -468,6 +470,8 @@ export function buildExportObject(submissions, shields = null, challenges = []) 
   if (Array.isArray(challenges) && challenges.length) {
     exportObj.colorSnap.challenges = [...challenges];
   }
+  // Friend ID (2.2), so moving to a new device keeps your identity.
+  if (friendId) exportObj.colorSnap.friendId = friendId;
   return exportObj;
 }
 

@@ -5,7 +5,7 @@ import process from "node:process";
 import { fileURLToPath } from "node:url";
 import { buildFixtures } from "./challengeFixtures.js";
 import {
-  encodeChallenge, decodeChallenge, challengeLink, resultFromSubmission, mergeReceived,
+  encodeChallenge, decodeChallenge, challengeLink, resultFromSubmission, storeReceived,
   validateNickname, displayName, compareResults,
 } from "../challenge.js";
 import { parseImportJson, buildExportObject } from "../logic.js";
@@ -93,8 +93,8 @@ describe("received challenges storage and export", () => {
   const a = encodeChallenge({ d: "2026-11-10", m: "easy", r: [1, 2, 3], p: 0 });
   const b = encodeChallenge({ d: "2026-11-09", m: "easy", r: [1, 2, 3], p: 0 });
 
-  it("merges, dedupes, sorts newest first, drops invalid", () => {
-    expect(mergeReceived([b], [a, b, "junk"])).toEqual([a, b]);
+  it("keeps received order, dedupes (first copy wins), drops invalid", () => {
+    expect(storeReceived([a, b, "junk", a])).toEqual([a, b]);
   });
 
   it("exports and imports the optional challenges list", () => {

@@ -56,7 +56,8 @@ different "Sam"s stay separate.
   you as a new person). Small print explains what it's for.
 - Data export (format stays version 1) adds optional `colorSnap.friendId`.
   Import with Replace adopts it (moving to a new phone keeps your identity);
-  Merge keeps the local one.
+  Merge keeps the local one, except that a device with no ID yet adopts the
+  file's. (The web import only merges, so the web follows that last rule.)
 
 **Web.** Each browser creates its own random ID the first time it shares a
 link, stored in `localStorage` next to the rest of the web data. It is never
@@ -99,20 +100,29 @@ Input: the received challenge links (stored as today) plus my submissions.
      otherwise it stays its own row.
    - Links with neither `i` nor a nickname ("A friend") can't be told apart:
      they're left out of the leaderboard (still listed in Friends' challenges).
-2. **Name:** the nickname from that friend's newest link.
+2. **Name:** the nickname from that friend's link with the latest day (the
+   first in stored order on ties). An ID group with no nickname shows as
+   "A friend".
 3. **One result per friend per day.** If a friend sent several links for the
-   same day, use the newest received (later attempts replace earlier ones).
+   same day, use the newest received, i.e. the first in stored order.
 4. **Record:** for each of the friend's days, run 2.1 `compare(mine, theirs)`:
    - `win` / `lose` / `tie` count toward the record and "played";
    - `different-difficulty` counts toward "played" only;
    - `different-day` can't happen (same day by construction); no result of
      mine for that day means it isn't shared yet (shown in history, not counted).
 5. **Leader:** more wins leads; equal wins is "Tied".
+6. **Sort:** newest day played together first; friends with no games yet
+   after them, by their newest link's day; then name (lowercased, plain
+   code-point order, no locale rules) and key (`id:<id>` / `name:<nickname>`).
 
 **Time window: all time.** Records never expire.
 
 ### Storage
 
+- Received links are stored as payload strings, **newest received first**
+  (2.1 sorted them by date; lists that show challenges sort by date
+  themselves). Opening a link puts it first; an import appends the file's
+  links after the stored ones. The first copy of a duplicate wins.
 - **Every game is kept.** A received link is a *game* once I have a full
   result for its day (whatever the outcome, including different difficulty).
   Games are never pruned.

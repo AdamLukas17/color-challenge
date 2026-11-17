@@ -12,6 +12,9 @@ import badWordsText from "./badwords-en.txt?raw";
 import substringWordsText from "./substring-words.txt?raw";
 
 export const CHALLENGE_LINK_BASE = "https://colorsnap.app/c/";
+/** Friend ID (shared/friend-leaderboard/SPEC.md): 10 characters of 0-9a-z. */
+export const FRIEND_ID_RE = /^[0-9a-z]{10}$/;
+export const isFriendId = (i) => typeof i === "string" && FRIEND_ID_RE.test(i);
 export const DEFAULT_FRIEND_NAME = "A friend";
 export const NICKNAME_MAX_LENGTH = 20;
 
@@ -133,10 +136,14 @@ function base64UrlDecode(s) {
   return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
 }
 
-/** Canonical JSON, built by hand so every platform produces identical bytes. */
-export function canonicalJson({ d, m, n, r, p }) {
+/**
+ * Canonical JSON, built by hand so every platform produces identical bytes.
+ * Key order: v, d, m, n?, i?, r, p (`i` is the 2.2 friend ID; 2.1 decoders ignore it).
+ */
+export function canonicalJson({ d, m, n, i, r, p }) {
   const name = n ? `"n":"${n}",` : "";
-  return `{"v":1,"d":"${d}","m":"${m}",${name}"r":[${r.join(",")}],"p":${p}}`;
+  const id = isFriendId(i) ? `"i":"${i}",` : "";
+  return `{"v":1,"d":"${d}","m":"${m}",${name}${id}"r":[${r.join(",")}],"p":${p}}`;
 }
 
 /**
@@ -184,13 +191,19 @@ export function decodeChallenge(input) {
   if (!o.r.every((x) => Number.isInteger(x) && x >= 0 && x <= 1000)) return { ok: false, error: "invalid" };
   if (!Number.isInteger(o.p) || o.p < 0 || o.p > o.r.length) return { ok: false, error: "invalid" };
   const name = o.n === undefined ? null : displayName(o.n);
-  return { ok: true, challenge: { d: o.d, m: o.m, n: name === DEFAULT_FRIEND_NAME ? null : name, r: o.r, p: o.p, payload: `${body}.${sum.toLowerCase()}` } };
+  const challenge = { d: o.d, m: o.m, n: name === DEFAULT_FRIEND_NAME ? null : name, r: o.r, p: o.p, payload: `${body}.${sum.toLowerCase()}` };
+  // Friend ID (2.2): only a well-formed one is kept; anything else is ignored.
+  if (isFriendId(o.i)) challenge.i = o.i;
+  return { ok: true, challenge };
 }
 
 /* ─── Results ─── */
 
-/** Turn a local completed submission into a challenge result, or null if it can't be shared. */
-export function resultFromSubmission(sub, nickname) {
+/**
+ * Turn a local completed submission into a challenge result, or null if it
+ * can't be shared. `friendId` (optional) is added as `i`.
+ */
+export function resultFromSubmission(sub, nickname, friendId) {
   if (!sub || !sub.completed || !DIFFICULTY[sub.difficulty]) return null;
   const results = sub.results || [];
   if (results.length !== DIFFICULTY[sub.difficulty].photos) return null;
@@ -200,6 +213,7 @@ export function resultFromSubmission(sub, nickname) {
     n: nickname || "",
     r: results.map((x) => Math.min(1000, Math.max(0, Math.round((Number(x.matchPercentage) || 0) * 10)))),
     p: results.filter((x) => x.passed).length,
+    ...(isFriendId(friendId) ? { i: friendId } : {}),
   };
 }
 
@@ -235,15 +249,39 @@ export function challengeState(challenge, submissions, todayStr, nickname = "") 
   return { state: "expired" };
 }
 
-/** Merge received payloads (dedupe, drop invalid, keep the newest `max` by date). */
-export function mergeReceived(existing, incoming, max = 50) {
-  const seen = new Map();
-  for (const p of [...(existing || []), ...(incoming || [])]) {
+/** Unplayed received links are dropped once they're this many days old. */
+export const UNPLAYED_KEEP_DAYS = 30;
+/** Safety cap on stored links (about 1 MB). */
+export const MAX_RECEIVED = 10000;
+
+/** `YYYY-MM-DD` minus `days`, computed in UTC so it never depends on the time zone. */
+export function addDays(dateStr, days) {
+  const [y, mo, d] = dateStr.split("-").map(Number);
+  const t = new Date(Date.UTC(y, mo - 1, d + days));
+  return t.toISOString().slice(0, 10);
+}
+
+/**
+ * Store received payloads (shared/friend-leaderboard/SPEC.md "Storage").
+ * `payloads` is in received order, newest first; the result keeps that order.
+ * Drops invalid and duplicate links (the first copy wins), then unplayed links
+ * (I have no full result for their day) more than UNPLAYED_KEEP_DAYS before
+ * `today`, then anything past MAX_RECEIVED. Games are never dropped otherwise.
+ * Without `today`, nothing is pruned by age.
+ */
+export function storeReceived(payloads, { submissions = {}, today = null } = {}) {
+  const cutoff = today ? addDays(today, -UNPLAYED_KEEP_DAYS) : null;
+  const seen = new Set();
+  const out = [];
+  for (const p of payloads || []) {
     const res = decodeChallenge(p);
-    if (res.ok && !seen.has(res.challenge.payload)) seen.set(res.challenge.payload, res.challenge.d);
+    if (!res.ok || seen.has(res.challenge.payload)) continue;
+    seen.add(res.challenge.payload);
+    const c = res.challenge;
+    const played = !!resultFromSubmission(submissions?.[c.d], "");
+    if (cutoff && !played && c.d < cutoff) continue;
+    out.push(c.payload);
+    if (out.length >= MAX_RECEIVED) break;
   }
-  return [...seen.entries()]
-    .sort((a, b) => (a[1] < b[1] ? 1 : a[1] > b[1] ? -1 : 0))
-    .slice(0, max)
-    .map(([p]) => p);
+  return out;
 }
