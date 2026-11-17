@@ -9,8 +9,9 @@ import { version as APP_VERSION } from "../package.json";
 import { useLocation, useNavigate } from "react-router-dom";
 import {
   challengeLink, decodeChallenge, resultFromSubmission, challengeState, averageMatch,
-  mergeReceived, validateNickname, DEFAULT_FRIEND_NAME, NICKNAME_MAX_LENGTH,
+  storeReceived, validateNickname, DEFAULT_FRIEND_NAME, NICKNAME_MAX_LENGTH,
 } from "./challenge.js";
+import { buildLeaderboard, removeFriend, newFriendId } from "./leaderboard.js";
 
 /* ─── Pure logic (palette, seeded RNG, color algorithms, streak,
  *     import/export) extracted to logic.js for testability.
@@ -98,8 +99,8 @@ function saveData(data) {
 }
 
 /* ─── Data Export/Import (browser wrappers around logic.js functions) ─── */
-function exportData(submissions, shields, challenges) {
-  const exportObj = buildExportObject(submissions, shields, challenges);
+function exportData(submissions, shields, challenges, friendId) {
+  const exportObj = buildExportObject(submissions, shields, challenges, friendId);
   const blob = new Blob([JSON.stringify(exportObj, null, 2)], { type: "application/json" });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
@@ -136,7 +137,7 @@ const LIGHT_VARS = `
   --cs-shadow: 0 1px 3px rgba(0,0,0,0.08), 0 1px 2px rgba(0,0,0,0.06);
   --cs-shadow-lg: 0 4px 16px rgba(0,0,0,0.1), 0 2px 4px rgba(0,0,0,0.06);
   --cs-accent: #006B60; --cs-on-accent: #FFFFFF; --cs-mint: #A8E5DC; --cs-mint-soft: #E0F2EF;
-  --cs-green: #2E7D32; --cs-red: #C62828; --cs-warning: #E8751A;
+  --cs-green: #2E7D32; --cs-red: #C62828; --cs-warning: #E8751A; --cs-shield-fill: #B85A0F;
   --cs-pass-bg: #E8F5E9; --cs-pass-border: #C8E6C9; --cs-fail-bg: #FFEBEE; --cs-fail-border: #FFCDD2;
 `;
 const DARK_VARS = `
@@ -146,7 +147,7 @@ const DARK_VARS = `
   --cs-shadow: 0 1px 3px rgba(0,0,0,0.5);
   --cs-shadow-lg: 0 4px 16px rgba(0,0,0,0.6);
   --cs-accent: #5FD4C4; --cs-on-accent: #00201C; --cs-mint: #005045; --cs-mint-soft: #0F3A35;
-  --cs-green: #81C784; --cs-red: #EF9A9A; --cs-warning: #EE8833;
+  --cs-green: #81C784; --cs-red: #EF9A9A; --cs-warning: #EE8833; --cs-shield-fill: #B85A0F;
   --cs-pass-bg: #1B3A20; --cs-pass-border: #2E5E35; --cs-fail-bg: #3E1E1E; --cs-fail-border: #6B2C2C;
 `;
 const themeCss = `
@@ -550,7 +551,7 @@ function ResultsScreen({ results, previews = [], todayColor, onReset, difficulty
   );
 }
 
-function StreakScreen({ submissions, shieldedDates, todayStr, onOpenCalendar }) {
+function StreakScreen({ submissions, shieldedDates, todayStr, onOpenCalendar, friendsCard = null }) {
   const streak = calculateStreak(submissions, shieldedDates);
   const days = getLastNDays(todayStr, 7);
   const shielded = new Set(shieldedDates || []);
@@ -576,7 +577,7 @@ function StreakScreen({ submissions, shieldedDates, todayStr, onOpenCalendar }) 
                 <div title={isShielded ? `${dateStr} (shielded)` : dateStr} style={{
                   width: "100%", aspectRatio: "1", borderRadius: "10px",
                   display: "flex", alignItems: "center", justifyContent: "center",
-                  background: done ? dayColor : isShielded ? theme.warning : theme.surfaceAlt,
+                  background: done ? dayColor : isShielded ? "var(--cs-shield-fill)" : theme.surfaceAlt, // 4.7:1 with the white shield, like the apps
                   color: done ? contrastText(dayColor) : isShielded ? "#FFFFFF" : "transparent",
                   border: isToday && !done && !isShielded ? `2px solid ${theme.border}` : "none",
                 }}>{done ? Icon.check() : isShielded ? Icon.shield() : null}</div>
@@ -589,6 +590,177 @@ function StreakScreen({ submissions, shieldedDates, todayStr, onOpenCalendar }) 
 
       <Button variant="tonal" onClick={onOpenCalendar} style={{ width: "100%", borderRadius: "16px", padding: "16px" }}>
         {Icon.calendar()} View full calendar
+      </Button>
+
+      {friendsCard}
+    </div>
+  );
+}
+
+/* ─── Friend leaderboard (shared/friend-leaderboard/SPEC.md) ─── */
+
+const recordText = (x) => `${x.w} - ${x.l} - ${x.t}`;
+const leaderText = (f) => (f.leader === "me" ? "You lead" : f.leader === "them" ? `${f.name} leads` : "Tied");
+const leaderColor = (f) => (f.leader === "me" ? theme.green : f.leader === "them" ? theme.red : theme.textSecondary);
+
+function FriendRow({ friend, onOpen }) {
+  return (
+    <button onClick={() => onOpen(friend.key)} style={{
+      display: "flex", alignItems: "center", gap: "12px", width: "100%", textAlign: "left",
+      padding: "12px 14px", borderRadius: "16px", border: "none", cursor: "pointer",
+      background: theme.surfaceAlt, fontFamily: theme.font, color: theme.text,
+    }}>
+      <div style={{ flex: 1, minWidth: 0 }}>
+        <div style={{ fontSize: "15px", fontWeight: 700, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{friend.name}</div>
+        <div style={{ fontSize: "13px", color: theme.textSecondary, whiteSpace: "nowrap" }}>
+          {friend.played ? `${friend.played} played` : "No games yet"}
+        </div>
+      </div>
+      {friend.played > 0 && (
+        <div style={{ textAlign: "right", flexShrink: 0 }}>
+          <div style={{ fontFamily: theme.mono, fontSize: "15px", fontWeight: 700 }}>{recordText(friend)}</div>
+          <div style={{ fontSize: "12px", fontWeight: 700, color: leaderColor(friend), whiteSpace: "nowrap", maxWidth: "140px", overflow: "hidden", textOverflow: "ellipsis" }}>{leaderText(friend)}</div>
+        </div>
+      )}
+    </button>
+  );
+}
+
+/** "Friends" card on the Streak screen: overall record and the most recent friends. */
+function FriendsLeaderboardCard({ board, onOpenAll, onOpenFriend }) {
+  const shown = board.friends.slice(0, 3);
+  return (
+    <Card>
+      <div style={{ display: "flex", alignItems: "baseline", justifyContent: "space-between", marginBottom: "14px", gap: "8px" }}>
+        <SectionLabel>Friends</SectionLabel>
+        {board.overall.played > 0 && (
+          <span style={{ fontSize: "13px", color: theme.textSecondary, whiteSpace: "nowrap" }}>
+            You <span style={{ fontFamily: theme.mono, fontWeight: 700, color: theme.text }}>{recordText(board.overall)}</span>
+          </span>
+        )}
+      </div>
+      {shown.length === 0 ? (
+        <div style={{ fontSize: "14px", color: theme.textSecondary, lineHeight: 1.5 }}>
+          Challenge a friend from your results to start a leaderboard.
+        </div>
+      ) : (
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {shown.map((f) => <FriendRow key={f.key} friend={f} onOpen={onOpenFriend} />)}
+          {board.friends.length > shown.length && (
+            <Button variant="tonal" onClick={onOpenAll} style={{ width: "100%", borderRadius: "14px" }}>
+              See all {board.friends.length} friends
+            </Button>
+          )}
+        </div>
+      )}
+    </Card>
+  );
+}
+
+function OverlayHeader({ title, onBack, label }) {
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
+      <button onClick={onBack} aria-label={label} style={{
+        width: 36, height: 36, borderRadius: "50%", border: "none", cursor: "pointer", flexShrink: 0,
+        background: theme.surfaceAlt, color: theme.text, display: "flex", alignItems: "center", justifyContent: "center",
+      }}>{Icon.close()}</button>
+      <div style={{ fontSize: "20px", fontWeight: 800, color: theme.text, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{title}</div>
+    </div>
+  );
+}
+
+function LeaderboardView({ board, onClose, onOpenFriend }) {
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <OverlayHeader title="Friends" onBack={onClose} label="Close friends" />
+      <Card>
+        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "baseline", marginBottom: "14px" }}>
+          <SectionLabel>Your record</SectionLabel>
+          <span style={{ fontFamily: theme.mono, fontSize: "16px", fontWeight: 700 }}>{recordText(board.overall)}</span>
+        </div>
+        <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+          {board.friends.map((f) => <FriendRow key={f.key} friend={f} onOpen={onOpenFriend} />)}
+        </div>
+        <div style={{ fontSize: "13px", color: theme.textTertiary, marginTop: "14px", lineHeight: 1.5 }}>
+          Wins - losses - ties on days you both played the same difficulty. Most recent first.
+        </div>
+      </Card>
+    </div>
+  );
+}
+
+function GameRow({ game, name }) {
+  const color = getColorForDate(game.d);
+  const st = statusFor({ state: "compare", outcome: game.outcome });
+  const score = (x) => `${x.p}/${x.r.length} · ${averageMatch(x.r)}%`;
+  return (
+    <div style={{ display: "flex", alignItems: "center", gap: "12px", padding: "12px 14px", borderRadius: "16px", background: theme.surfaceAlt }}>
+      <div style={{ width: 32, height: 32, borderRadius: "9px", background: color.hex, flexShrink: 0 }} />
+      <div style={{ flex: 1, minWidth: 0, fontSize: "13px", color: theme.textSecondary, lineHeight: 1.45 }}>
+        <div style={{ fontSize: "14px", fontWeight: 700, color: theme.text }}>{shortDate(game.d)} · {color.name}</div>
+        <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>You {score(game.mine)} ({DIFFICULTY[game.mine.m].label})</div>
+        <div style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{name} {score(game.theirs)} ({DIFFICULTY[game.theirs.m].label})</div>
+      </div>
+      <span style={{ fontSize: "12px", fontWeight: 700, color: st.color, background: st.bg, borderRadius: "999px", padding: "6px 12px", whiteSpace: "nowrap" }}>{st.text}</span>
+    </div>
+  );
+}
+
+function FriendHistoryView({ friend, todayStr, onClose, onRemove, onOpenChallenge }) {
+  if (!friend) return null;
+  const remove = () => {
+    const games = friend.played === 1 ? "your 1 game" : `your ${friend.played} games`;
+    if (window.confirm(`Remove ${friend.name}${friend.played ? ` and ${games}` : ""}? This can't be undone.`)) onRemove(friend.key);
+  };
+  return (
+    <div style={{ display: "flex", flexDirection: "column", gap: "16px" }}>
+      <OverlayHeader title={friend.name} onBack={onClose} label={`Close ${friend.name}`} />
+      <Card style={{ textAlign: "center" }}>
+        <div style={{ fontFamily: theme.mono, fontSize: "36px", fontWeight: 700, color: theme.text }}>{recordText(friend)}</div>
+        <div style={{ fontSize: "14px", color: theme.textSecondary, marginTop: "4px" }}>
+          wins - losses - ties · {friend.played} played
+        </div>
+        <div style={{ fontSize: "14px", fontWeight: 700, color: leaderColor(friend), marginTop: "8px" }}>{leaderText(friend)}</div>
+      </Card>
+
+      {friend.pending.length > 0 && (
+        <Card>
+          <SectionLabel style={{ marginBottom: "14px" }}>Not played yet</SectionLabel>
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {friend.pending.map((x) => (
+              <button key={x.payload} onClick={() => onOpenChallenge(x.payload)} style={{
+                display: "flex", alignItems: "center", gap: "12px", width: "100%", textAlign: "left",
+                padding: "12px 14px", borderRadius: "16px", border: "none", cursor: "pointer",
+                background: theme.surfaceAlt, fontFamily: theme.font, color: theme.text,
+              }}>
+                <div style={{ width: 32, height: 32, borderRadius: "9px", background: getColorForDate(x.d).hex, flexShrink: 0 }} />
+                <div style={{ flex: 1, minWidth: 0, fontSize: "13px", color: theme.textSecondary }}>
+                  <div style={{ fontSize: "14px", fontWeight: 700, color: theme.text }}>{shortDate(x.d)} · {getColorForDate(x.d).name}</div>
+                  {DIFFICULTY[x.m].label} · {x.p}/{x.r.length} · {averageMatch(x.r)}%
+                </div>
+                {(() => {
+                  const st = statusFor({ state: x.d === todayStr ? "play" : "expired" });
+                  return <span style={{ fontSize: "12px", fontWeight: 700, color: st.color, background: st.bg, borderRadius: "999px", padding: "6px 12px", whiteSpace: "nowrap" }}>{st.text}</span>;
+                })()}
+              </button>
+            ))}
+          </div>
+        </Card>
+      )}
+
+      <Card>
+        <SectionLabel style={{ marginBottom: "14px" }}>Games</SectionLabel>
+        {friend.games.length === 0 ? (
+          <div style={{ fontSize: "14px", color: theme.textSecondary }}>No games together yet.</div>
+        ) : (
+          <div style={{ display: "flex", flexDirection: "column", gap: "10px" }}>
+            {friend.games.map((g) => <GameRow key={g.d} game={g} name={friend.name} />)}
+          </div>
+        )}
+      </Card>
+
+      <Button variant="secondary" onClick={remove} style={{ width: "100%", borderRadius: "16px", color: theme.red }}>
+        Remove {friend.name}
       </Button>
     </div>
   );
@@ -668,7 +840,7 @@ function CalendarView({ submissions, onClose }) {
   );
 }
 
-function NicknameCard({ nickname, onSave }) {
+function NicknameCard({ nickname, onSave, onResetFriendId }) {
   const [draft, setDraft] = useState(nickname || "");
   const [message, setMessage] = useState(null);
   const save = () => {
@@ -697,16 +869,29 @@ function NicknameCard({ nickname, onSave }) {
       {message && (
         <div role="status" style={{ fontSize: "13px", marginTop: "10px", color: message.error ? theme.red : theme.textSecondary }}>{message.text}</div>
       )}
+      {onResetFriendId && (
+        <div style={{ borderTop: `1px solid ${theme.border}`, marginTop: "16px", paddingTop: "12px", fontSize: "13px", color: theme.textSecondary, lineHeight: 1.45 }}>
+          Your links carry a random friend ID so friends' leaderboards keep your games together.{" "}
+          <button onClick={() => {
+            if (window.confirm("Reset your friend ID? Friends will see you as a new person on their leaderboards.")) {
+              onResetFriendId();
+              setMessage({ error: false, text: "Friend ID reset." });
+            }
+          }} style={{ border: "none", background: "none", padding: 0, cursor: "pointer", color: theme.accent, fontWeight: 700, fontFamily: theme.font, fontSize: "13px" }}>
+            Reset friend ID
+          </button>
+        </div>
+      )}
     </Card>
   );
 }
 
-function SettingsScreen({ themeMode, onThemeModeChange, onExport, onImport, nickname, onNicknameChange }) {
+function SettingsScreen({ themeMode, onThemeModeChange, onExport, onImport, nickname, onNicknameChange, onResetFriendId }) {
   const fileInputRef = useRef(null);
   const modes = [["system", "System"], ["light", "Light"], ["dark", "Dark"]];
   return (
     <div style={{ display: "flex", flexDirection: "column", gap: "20px" }}>
-      <NicknameCard nickname={nickname} onSave={onNicknameChange} />
+      <NicknameCard nickname={nickname} onSave={onNicknameChange} onResetFriendId={onResetFriendId} />
       <Card>
         <div style={{ display: "flex", gap: "14px", alignItems: "flex-start" }}>
           <div style={{ color: theme.accent, marginTop: "2px" }}>{Icon.bell()}</div>
@@ -840,7 +1025,9 @@ function FriendsCard({ received, submissions, todayStr, nickname, onOpen }) {
   const items = received
     .map((payload) => decodeChallenge(payload))
     .filter((res) => res.ok && recent.has(res.challenge.d))
-    .map((res) => res.challenge);
+    .map((res) => res.challenge)
+    // Stored newest-received first (leaderboard SPEC); show newest day first.
+    .sort((a, b) => (a.d < b.d ? 1 : a.d > b.d ? -1 : 0));
   if (!items.length) return null;
   return (
     <Card>
@@ -880,7 +1067,7 @@ function ScoreColumn({ title, result }) {
   );
 }
 
-function ChallengeModal({ payload, linkError, submissions, todayStr, nickname, fromLink, onPlay, onClose }) {
+function ChallengeModal({ payload, linkError, submissions, todayStr, nickname, friendId, fromLink, onPlay, onClose }) {
   useEffect(() => {
     const onKey = (e) => { if (e.key === "Escape") onClose(); };
     window.addEventListener("keydown", onKey);
@@ -946,7 +1133,7 @@ function ChallengeModal({ payload, linkError, submissions, todayStr, nickname, f
               </>
             )}
             {st.state === "compare" && (
-              <Button onClick={() => shareText(challengeShareText({ ...st.mine, n: nickname }))} style={{ width: "100%" }}>
+              <Button onClick={() => shareText(challengeShareText({ ...st.mine, n: nickname, i: friendId?.() }))} style={{ width: "100%" }}>
                 {Icon.share()} Send your result back
               </Button>
             )}
@@ -996,8 +1183,12 @@ export default function Game() {
   const [showCalendar, setShowCalendar] = useState(false);
   const [data, setData] = useState(() => {
     const d = loadData();
-    return linkResult?.ok ? { ...d, received: mergeReceived(d.received, [linkResult.challenge.payload]) } : d;
+    // Newest received first; prunes unplayed links older than 30 days.
+    const incoming = linkResult?.ok ? [linkResult.challenge.payload] : [];
+    return { ...d, received: storeReceived([...incoming, ...(d.received || [])], { submissions: d.submissions, today: getLocalDateStr() }) };
   });
+  // Friends leaderboard overlay: null, "all", or a friend key.
+  const [friendView, setFriendView] = useState(null);
   const [showInfo, setShowInfo] = useState(() => !linkResult && !localStorage.getItem(ONBOARDING_KEY));
   const [themeMode, setThemeMode] = useState(loadThemeMode);
   // Wide browsers get two panes side by side, like the unfolded phones.
@@ -1030,9 +1221,37 @@ export default function Game() {
     saveData(next);
   };
 
+  // Friend ID (leaderboard SPEC): created the first time this browser shares.
+  const ensureFriendId = () => {
+    if (data.friendId) return data.friendId;
+    const friendId = newFriendId();
+    const next = { ...data, friendId };
+    setData(next);
+    saveData(next);
+    return friendId;
+  };
+
   const challengeFriend = () => {
-    const result = resultFromSubmission(data.submissions[todayStr], data.nickname);
+    const result = resultFromSubmission(data.submissions[todayStr], data.nickname, ensureFriendId());
     if (result) shareText(challengeShareText(result));
+  };
+
+  const resetFriendId = () => {
+    const next = { ...data, friendId: newFriendId() };
+    setData(next);
+    saveData(next);
+  };
+
+  const board = useMemo(
+    () => buildLeaderboard(data.received || [], data.submissions, { myId: data.friendId || null }),
+    [data.received, data.submissions, data.friendId],
+  );
+
+  const deleteFriend = (key) => {
+    const next = { ...data, received: removeFriend(data.received || [], key, { myId: data.friendId || null }) };
+    setData(next);
+    saveData(next);
+    setFriendView(board.friends.length > 1 ? "all" : null);
   };
 
   const playChallenge = (c) => {
@@ -1070,7 +1289,10 @@ export default function Game() {
       // Preserve shields carried in the file so a later export keeps them.
       const newData = {
         ...data, submissions: result.merged, shields: result.shields ?? data.shields,
-        received: mergeReceived(data.received, result.challenges),
+        // Web import only merges: keep the stored order (newer) first, then the file's.
+        received: storeReceived([...(data.received || []), ...result.challenges], { submissions: result.merged, today: todayStr }),
+        // Adopt the file's friend ID only if this browser doesn't have one yet.
+        friendId: data.friendId || result.friendId || undefined,
       };
       setData(newData);
       saveData(newData);
@@ -1078,7 +1300,7 @@ export default function Game() {
     }).catch((err) => alert(err.message));
   };
 
-  const selectTab = (id) => { setShowCalendar(false); setTab(id); };
+  const selectTab = (id) => { setShowCalendar(false); setFriendView(null); setTab(id); };
 
   const renderScreen = (id) => {
     if (id === "challenge") return (
@@ -1092,19 +1314,23 @@ export default function Game() {
       </div>
     );
     if (id === "streak") return (
-      <StreakScreen submissions={data.submissions} shieldedDates={data.shields?.shieldedDates} todayStr={todayStr} onOpenCalendar={() => setShowCalendar(true)} />
+      <StreakScreen submissions={data.submissions} shieldedDates={data.shields?.shieldedDates} todayStr={todayStr}
+        onOpenCalendar={() => { setFriendView(null); setShowCalendar(true); }}
+        friendsCard={<FriendsLeaderboardCard board={board} onOpenAll={() => setFriendView("all")} onOpenFriend={(k) => setFriendView(k)} />} />
     );
     return (
       <SettingsScreen themeMode={themeMode} onThemeModeChange={setThemeMode}
-        onExport={() => exportData(data.submissions, data.shields, data.received)} onImport={handleImport}
-        nickname={data.nickname || ""} onNicknameChange={saveNickname} />
+        onExport={() => exportData(data.submissions, data.shields, data.received, data.friendId)} onImport={handleImport}
+        nickname={data.nickname || ""} onNicknameChange={saveNickname} onResetFriendId={resetFriendId} />
     );
   };
 
   // Two panes: adjacent screens with Streak as the pivot (Challenge | Streak,
   // then Streak | Settings), same as the apps.
   const pairStart = tab === "settings" ? 1 : 0;
-  const maxWidth = twoPane && !showCalendar ? "1040px" : showCalendar && twoPane ? "640px" : "480px";
+  const overlay = showCalendar || friendView !== null;
+  const maxWidth = twoPane && !overlay ? "1040px" : overlay && twoPane ? "640px" : "480px";
+  const openFriend = friendView && friendView !== "all" ? board.friends.find((f) => f.key === friendView) : null;
 
   return (
     <div style={{ fontFamily: theme.font, background: theme.bg, minHeight: "100vh", color: theme.text }}>
@@ -1114,7 +1340,7 @@ export default function Game() {
       {showInfo && <InfoModal onClose={handleCloseInfo} />}
       {openChallenge && (
         <ChallengeModal payload={openChallenge.payload} linkError={openChallenge.error} fromLink={openChallenge.fromLink}
-          submissions={data.submissions} todayStr={todayStr} nickname={data.nickname || ""}
+          submissions={data.submissions} todayStr={todayStr} nickname={data.nickname || ""} friendId={() => ensureFriendId()}
           onPlay={playChallenge} onClose={() => setOpenChallenge(null)} />
       )}
 
@@ -1144,6 +1370,15 @@ export default function Game() {
       <div style={{ maxWidth, margin: "0 auto", padding: "16px 16px 110px" }}>
         {showCalendar ? (
           <CalendarView submissions={data.submissions} onClose={() => setShowCalendar(false)} />
+        ) : friendView === "all" ? (
+          <LeaderboardView board={board} onClose={() => setFriendView(null)} onOpenFriend={(k) => setFriendView(k)} />
+        ) : friendView ? (
+          openFriend ? (
+            <FriendHistoryView friend={openFriend} todayStr={todayStr} onClose={() => setFriendView(board.friends.length > 3 ? "all" : null)}
+              onRemove={deleteFriend} onOpenChallenge={(payload) => setOpenChallenge({ payload, fromLink: false })} />
+          ) : (
+            <LeaderboardView board={board} onClose={() => setFriendView(null)} onOpenFriend={(k) => setFriendView(k)} />
+          )
         ) : twoPane ? (
           <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "32px", alignItems: "start" }}>
             <div>{renderScreen(SCREENS[pairStart])}</div>
@@ -1162,7 +1397,7 @@ export default function Game() {
       }}>
         <div style={{ maxWidth: "480px", margin: "0 auto", display: "flex", padding: "8px 0 max(8px, env(safe-area-inset-bottom))" }}>
           {TABS.map((t) => {
-            const active = tab === t.id && !showCalendar;
+            const active = tab === t.id && !overlay;
             return (
               <button key={t.id} onClick={() => selectTab(t.id)} aria-current={active ? "page" : undefined} style={{
                 flex: 1, display: "flex", flexDirection: "column", alignItems: "center", gap: "4px",

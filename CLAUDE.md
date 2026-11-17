@@ -38,10 +38,16 @@ Tabs: **Challenge / Streak / Settings**. On wide browsers (>= 900px) two adjacen
 
 ### Friend challenges (2.1)
 Share links `https://colorsnap.app/c/<payload>`; no server. Spec, shared fixtures and the nickname word lists live in `../shared/friend-challenges/` (also used by the Android and iOS tests).
-- **`src/challenge.js`** is the reference implementation: link encode/decode, nickname sanitize + LDNOOBW filter, `compareResults`, `challengeState`, `mergeReceived`. Changing it means regenerating fixtures (`npm run fixtures:challenges`) and updating Android `FriendChallenge.kt` and iOS `FriendChallenge.swift`.
+- **`src/challenge.js`** is the reference implementation: link encode/decode, nickname sanitize + LDNOOBW filter, `compareResults`, `challengeState`, `storeReceived`. Changing it means regenerating fixtures (`npm run fixtures:challenges`) and updating Android `FriendChallenge.kt` and iOS `FriendChallenge.swift`.
 - `src/badwords-en.txt` and `src/substring-words.txt` are copies of the shared files (a test keeps them identical).
 - UI in `Game.jsx`: Nickname card in Settings, "Challenge a friend" on Results, `FriendsCard` under the Challenge screen, `ChallengeModal` (play / head-to-head / expired, store buttons when opened from a link). `App.jsx` routes `/c/*` to the game, which decodes the link, stores it in `data.received`, and moves to `/play`.
 - App links: `public/.well-known/apple-app-site-association` and `assetlinks.json`; `vercel.json` serves them as JSON and keeps them out of the SPA rewrite.
+
+### Friend leaderboard (2.2)
+Spec and shared fixtures: `../shared/friend-leaderboard/` (`npm run fixtures:leaderboard`). `src/leaderboard.js` is the reference (`buildLeaderboard`, `groupFriends`, `removeFriend`, `newFriendId`); Android `FriendLeaderboard.kt` and iOS `FriendLeaderboard.swift` must match.
+- Links carry an optional friend ID `i` (`challenge.js`, `canonicalJson` order v,d,m,n?,i?,r,p). The browser's ID is `data.friendId`, created the first time it shares; exported as `colorSnap.friendId`.
+- Received links are stored newest-received first via `storeReceived()` (keeps every game, drops unplayed links older than 30 days, cap 10,000). Lists sort by date themselves.
+- UI in `Game.jsx`: `FriendsLeaderboardCard` on the Streak screen, `LeaderboardView` and `FriendHistoryView` (Remove) as overlays (`friendView` state), "Reset friend ID" in the Nickname card.
 
 ### Key Functions (in `logic.js`)
 - `seededRandom(seed)` — Deterministic RNG (32-bit hash)
